@@ -5,7 +5,7 @@ module Hstratus.Cli.DriveSpec (spec) where
 import Data.Either (isLeft)
 import Data.List.NonEmpty (NonEmpty (..))
 import Hstratus.Cli (TopCommand (..), cliParser)
-import Hstratus.Cli.Drive (CpDest (..), CpOpts (..), DriveCommand (..), ListFolderOpts (..), resolveLocalDest)
+import Hstratus.Cli.Drive (CpDest (..), CpOpts (..), DriveCommand (..), LsOpts (..), resolveLocalDest)
 import Network.HStratus.Http.Cli (CommonOpts (..))
 import Options.Applicative
   ( ParserResult (..)
@@ -52,17 +52,21 @@ spec = do
         `shouldReturn` home </> "icloud-drive" </> "Documents/report.pdf"
 
   describe "drive parser" $ do
-    it "parses drive list-root" $
-      parseCmd ["drive", "list-root"]
-        `endsRight` DriveCmd (DriveListRoot defaultOpts)
+    it "parses drive ls with no argument (root)" $
+      parseCmd ["drive", "ls"]
+        `endsRight` DriveCmd (DriveLs (LsOpts [] defaultOpts))
 
-    it "parses drive list-folder PATH" $
-      parseCmd ["drive", "list-folder", "Documents/Work"]
-        `endsRight` DriveCmd (DriveListFolder (ListFolderOpts ["Documents", "Work"] defaultOpts))
+    it "parses drive ls PATH" $
+      parseCmd ["drive", "ls", "Documents/Work"]
+        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents", "Work"] defaultOpts))
 
-    it "parses drive list-root --china --log" $
-      parseCmd ["drive", "list-root", "--china", "--log"]
-        `endsRight` DriveCmd (DriveListRoot defaultOpts{optChina = True, optLog = True})
+    it "parses drive ls PATH with common flags" $
+      parseCmd ["drive", "ls", "Documents", "--china", "--log"]
+        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents"] defaultOpts{optChina = True, optLog = True}))
+
+    it "treats a leading slash in PATH as root listing" $
+      parseCmd ["drive", "ls", "/Documents/Work"]
+        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents", "Work"] defaultOpts))
 
     it "parses drive cp PATH with no dest option" $
       parseCmd ["drive", "cp", "Documents/report.pdf"]

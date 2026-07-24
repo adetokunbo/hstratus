@@ -2,7 +2,7 @@
 
 module Hstratus.Cli.Drive
   ( DriveCommand (..)
-  , ListFolderOpts (..)
+  , LsOpts (..)
   , CpOpts (..)
   , CpDest (..)
   , driveParser
@@ -39,15 +39,14 @@ import System.FilePath (joinPath, takeDirectory, (</>))
 
 
 data DriveCommand
-  = DriveListRoot !CommonOpts
-  | DriveListFolder !ListFolderOpts
+  = DriveLs !LsOpts
   | DriveCp !CpOpts
   deriving (Eq, Show)
 
 
-data ListFolderOpts = ListFolderOpts
-  { lfPath :: ![Text]
-  , lfCommon :: !CommonOpts
+data LsOpts = LsOpts
+  { lsPath :: ![Text]
+  , lsCommon :: !CommonOpts
   }
   deriving (Eq, Show)
 
@@ -70,17 +69,11 @@ driveParser :: Parser DriveCommand
 driveParser =
   subparser
     ( command
-        "list-root"
+        "ls"
         ( info
-            (DriveListRoot <$> commonOptsParser <**> helper)
-            (progDesc "List immediate children of the top-level iCloud Drive folder")
+            (DriveLs <$> lsOptsParser <**> helper)
+            (progDesc "List contents of a Drive folder (default: root)")
         )
-        <> command
-          "list-folder"
-          ( info
-              (DriveListFolder <$> listFolderOptsParser <**> helper)
-              (progDesc "List contents of a folder at a slash-separated path from root")
-          )
         <> command
           "cp"
           ( info
@@ -108,18 +101,17 @@ cpOptsParser =
     <*> commonOptsParser
 
 
-listFolderOptsParser :: Parser ListFolderOpts
-listFolderOptsParser =
-  ListFolderOpts
+lsOptsParser :: Parser LsOpts
+lsOptsParser =
+  LsOpts
     <$> fmap
-      (filter (not . Text.null) . Text.splitOn (Text.pack "/") . Text.pack)
-      (argument str (metavar "PATH" <> help "Slash-separated path from root (e.g. Documents/Work)"))
+      (maybe [] (filter (not . Text.null) . Text.splitOn (Text.pack "/") . Text.pack))
+      (optional (argument str (metavar "[PATH]" <> help "Slash-separated path from root (e.g. Documents/Work)")))
     <*> commonOptsParser
 
 
 runDrive :: DriveCommand -> IO ()
-runDrive (DriveListRoot opts) = runListRoot opts
-runDrive (DriveListFolder opts) = runListFolder opts
+runDrive (DriveLs opts) = runLs opts
 runDrive (DriveCp opts) = runCp opts
 
 
@@ -159,19 +151,11 @@ resolveLocalDest _ segs = do
   pure $ home </> "icloud-drive" </> joinPath (map Text.unpack (NE.toList segs))
 
 
-runListRoot :: CommonOpts -> IO ()
-runListRoot opts =
-  withDriveApi opts $ \da -> do
+runLs :: LsOpts -> IO ()
+runLs opts =
+  withDriveApi (lsCommon opts) $ \da -> do
     root <- driveRoot da
-    nodes <- listFolder da (fnId root)
-    mapM_ printNode nodes
-
-
-runListFolder :: ListFolderOpts -> IO ()
-runListFolder opts =
-  withDriveApi (lfCommon opts) $ \da -> do
-    root <- driveRoot da
-    nid <- navigatePath da (fnId root) (lfPath opts)
+    nid <- navigatePath da (fnId root) (lsPath opts)
     nodes <- listFolder da nid
     mapM_ printNode nodes
 
