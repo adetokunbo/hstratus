@@ -7,27 +7,13 @@ prompting the terminal for verification codes when needed.  On success it caches
 a session token for use with other iCloud services.
 
 
-## Warning — use at your own risk
+## Disclaimer — use at your own risk
 
 - This library is **unofficial** and not supported by Apple.
 - The iCloud authentication protocol it uses is undocumented and may change
   without notice.
 
-
-## Reauthentication
-
-The session token expires after a period set by iCloud (approximately two months
-at the time of writing).  When it does, authenticate again to refresh it.
-
-
-## Command-line tool
-
-The command-line interface is provided by the [`hstratus`](../hstratus/#readme)
-package.  Use `hstratus auth init` and `hstratus auth login` to save credentials
-and authenticate.
-
-
-## Using the library
+## Usage
 
 The same two steps — saving credentials and authenticating — are available
 programmatically.
@@ -87,3 +73,15 @@ exampleWith api = loginWith readCode (\_ -> pure Nothing) chooseDevice api
 If you already hold a `Requires2FA` or `Requires2SA` value from a prior call,
 resume with `completeTwoFactor` / `completeTwoFactorWith` or `complete2SA` /
 `complete2SAWith`.
+
+## Reauthentication
+
+The session token expires after a period set by iCloud (approximately two months
+at the time of writing).  When it does, authenticate again to refresh it.
+
+
+## CLI usage
+
+A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
+package.  Use [`hstratus auth init`](../hstratus#hstratus-auth-init) and [`hstratus auth login`](../hstratus#hstratus-auth-login) to save credentials and authenticate.
+

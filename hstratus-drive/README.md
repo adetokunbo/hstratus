@@ -8,20 +8,13 @@ listing folder contents, downloading files, and mutating the tree (create,
 rename, delete, upload).
 
 
-## Warning — use at your own risk
+## Disclaimer — use at your own risk
 
 - This library is **unofficial** and not supported by Apple.
 - The iCloud Drive API it uses is undocumented and may change without notice.
 
 
-## Command-line tool
-
-The command-line interface is provided by the [`hstratus`](../hstratus/#readme)
-package.  Use `hstratus drive list-root` and `hstratus drive list-folder` to
-browse iCloud Drive.
-
-
-## Using the library
+## Usage
 
 After a successful login with `hstratus-auth`, construct a `DriveApi` value and
 use it to browse or download files.
@@ -36,11 +29,14 @@ import Network.HStratus.Drive
 example :: IO ()
 example = do
   api <- mkApi Usual
-  Authenticated sess ad <- login api
-  da    <- mkDriveApi ad sess api
-  root  <- driveRoot da
-  nodes <- listFolder da (fnId root)
-  mapM_ print nodes
+  result <- login api
+  case result of
+    Authenticated sess ad -> do
+      da    <- mkDriveApi ad sess api
+      root  <- driveRoot da
+      nodes <- listFolder da (fnId root)
+      mapM_ print nodes
+    _ -> putStrLn "Unexpected result"
 ```
 
 ### Downloading
@@ -61,3 +57,10 @@ mutationExample da folder = do
   createFolder da (fnId folder) "New Folder"
   -- renameNode, deleteNode, and uploadFile follow the same pattern
 ```
+
+
+## CLI usage
+
+A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
+package.  Use [`hstratus drive ls`](../hstratus#hstratus-drive-ls) to list Drive contents and
+[`hstratus drive cp`](../hstratus#hstratus-drive-cp) to download files.
