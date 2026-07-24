@@ -3,6 +3,7 @@
 module Hstratus.Cli.Notes
   ( NotesCommand (..)
   , ListNotesOpts (..)
+  , GetOpts (..)
   , notesParser
   , runNotes
   , findFolderByName
@@ -11,22 +12,31 @@ where
 
 import Control.Exception (catch)
 import Data.List (find)
+import Data.Maybe (catMaybes)
 import qualified Data.Text as Text
 import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser, onServiceError, runWithApi)
 import Network.HStratus.Notes
 import Options.Applicative
-import System.Exit (exitFailure)
+import System.Exit (die, exitFailure)
 
 
 data NotesCommand
   = NotesListFolders CommonOpts
   | NotesListNotes ListNotesOpts
+  | NotesGet GetOpts
   deriving (Eq, Show)
 
 
 data ListNotesOpts = ListNotesOpts
   { lnFolder :: Maybe Text.Text
   , lnCommon :: CommonOpts
+  }
+  deriving (Eq, Show)
+
+
+data GetOpts = GetOpts
+  { gnNoteId :: NoteId
+  , gnCommon :: CommonOpts
   }
   deriving (Eq, Show)
 
@@ -46,7 +56,20 @@ notesParser =
               (NotesListNotes <$> listNotesOptsParser <**> helper)
               (progDesc "List notes, optionally filtered by folder name")
           )
+        <> command
+          "get"
+          ( info
+              (NotesGet <$> getOptsParser <**> helper)
+              (progDesc "Fetch and display the plain-text body of a note")
+          )
     )
+
+
+getOptsParser :: Parser GetOpts
+getOptsParser =
+  GetOpts
+    <$> (NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "Note ID from list-notes output"))
+    <*> commonOptsParser
 
 
 listNotesOptsParser :: Parser ListNotesOpts
@@ -66,6 +89,7 @@ listNotesOptsParser =
 runNotes :: NotesCommand -> IO ()
 runNotes (NotesListFolders opts) = runListFolders opts
 runNotes (NotesListNotes opts) = runListNotes opts
+runNotes (NotesGet opts) = runGet opts
 
 
 runListFolders :: CommonOpts -> IO ()
@@ -83,6 +107,29 @@ runListNotes opts =
         fid <- resolveFolderName na name
         notesInFolder na fid
     mapM_ printNote notes
+
+
+runGet :: GetOpts -> IO ()
+runGet opts =
+  withNotesApi (gnCommon opts) $ \na -> do
+    let nid = gnNoteId opts
+    mnote <- getNote na nid
+    note <- case mnote of
+      Nothing -> die $ "Note not found: " <> Text.unpack (unNoteId nid)
+      Just n -> pure n
+    result <- decodeNoteBody (noteBodyBytes note)
+    nt <- case result of
+      Left err -> die $ "Failed to decode note body: " <> err
+      Right decoded -> pure decoded
+    let s = noteInfo note
+        titleStr = maybe "Untitled" Text.unpack (nsTitle s)
+    mapM_ putStrLn $
+      catMaybes
+        [ Just (titleStr <> "  [" <> Text.unpack (unNoteId nid) <> "]")
+        , fmap (\t -> "Modified: " <> show t) (nsModified s)
+        , Just ""
+        ]
+    putStrLn (Text.unpack (ntText nt))
 
 
 resolveFolderName :: NotesApi -> Text.Text -> IO FolderId
