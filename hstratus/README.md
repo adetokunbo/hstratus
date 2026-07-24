@@ -79,37 +79,50 @@ verification code when required.
 Usage: hstratus drive COMMAND
 
 Available commands:
-  list-root    List immediate children of the top-level iCloud Drive folder
-  list-folder  List contents of a folder at a slash-separated path from root
+  ls  List contents of a Drive folder (default: root)
+  cp  Download a file from Drive to the local filesystem
 ```
 
-#### `hstratus drive list-root`
+#### `hstratus drive ls`
 
 ```
-Usage: hstratus drive list-root [--china] [--log] [--log-file FILE]
-                                [--log-bodies] [--redact]
+Usage: hstratus drive ls [[PATH]] [--china] [--log] [--log-file FILE]
+                         [--log-bodies] [--redact]
+
+  [PATH]  Slash-separated path from root (e.g. Documents/Work)
 ```
 
+With no argument, lists the root folder.  With a path, lists that folder.
+
 ```
-$ hstratus drive list-root
+$ hstratus drive ls
 FOLDER  Desktop
 FOLDER  Documents
 FILE    notes.txt  (1024 bytes)
-```
 
-#### `hstratus drive list-folder`
-
-```
-Usage: hstratus drive list-folder PATH [--china] [--log] [--log-file FILE]
-                                       [--log-bodies] [--redact]
-
-  PATH  Slash-separated path from root (e.g. Documents/Work)
-```
-
-```
-$ hstratus drive list-folder Documents/Work
+$ hstratus drive ls Documents/Work
 FOLDER  Archive
 FILE    report.pdf  (204800 bytes)
+```
+
+#### `hstratus drive cp`
+
+```
+Usage: hstratus drive cp PATH [--root DIR | --output FILE]
+                         [--china] [--log] [--log-file FILE]
+                         [--log-bodies] [--redact]
+
+  PATH           Slash-separated path to the file in Drive
+  --root DIR     Copy under DIR, mirroring the Drive path
+  --output FILE  Copy to the exact local path FILE
+```
+
+Without `--root` or `--output`, the file is placed under `~/icloud-drive/`
+mirroring the Drive path.
+
+```
+$ hstratus drive cp Documents/report.pdf --output /tmp/report.pdf
+Downloaded to /tmp/report.pdf
 ```
 
 
