@@ -68,7 +68,7 @@ notesParser =
 getOptsParser :: Parser GetOpts
 getOptsParser =
   GetOpts
-    <$> (NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "Note ID from list-notes output"))
+    <$> (NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "UUID record name (e.g. 68567409-5528-458C-9A00-7A2AB485CAD6), as shown by list-notes"))
     <*> commonOptsParser
 
 
