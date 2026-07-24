@@ -21,7 +21,7 @@ tested-with:
 
 source-repository head
   type:     git
-  location: https://github.com/adetokunbo/icloud-hs.git
+  location: https://github.com/adetokunbo/hstratus.git
 
 library
   exposed-modules:
