@@ -31,7 +31,8 @@ data-files:         testdata/*.json
 
 source-repository head
   type:     git
-  location: https://github.com/adetokunbo/icloud-hs.git
+  location: https://github.com/adetokunbo/hstratus.git
+  subdir:   hstratus-auth
 
 library hstratus-auth-internal
   exposed-modules:  Network.HStratus.Internal.Endpoints

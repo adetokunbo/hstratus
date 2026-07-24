@@ -31,7 +31,7 @@ extra-doc-files:
 
 source-repository head
   type:     git
-  location: https://github.com/adetokunbo/icloud-hs.git
+  location: https://github.com/adetokunbo/hstratus.git
   subdir:   hstratus-drive
 
 library hstratus-drive-internal
