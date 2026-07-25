@@ -18,7 +18,7 @@ import Data.Text (Text)
 import Data.Time (UTCTime)
 
 
--- | CloudKit record name for a note (e.g. @\"Note\/ABCD-1234\"@).
+-- | CloudKit record name for a note (e.g. @\"68567409-5528-458C-9A00-7A2AB485CAD6\"@).
 newtype NoteId = NoteId
   { unNoteId :: Text
   -- ^ The raw CloudKit record name.
@@ -26,7 +26,7 @@ newtype NoteId = NoteId
   deriving (Eq, Ord, Show)
 
 
--- | CloudKit record name for a folder (e.g. @\"Folder\/ABCD-1234\"@).
+-- | CloudKit record name for a folder (e.g. @\"4C3FC840-3B07-4215-8E61-128AB3EB425E\"@).
 newtype FolderId = FolderId
   { unFolderId :: Text
   -- ^ The raw CloudKit record name.

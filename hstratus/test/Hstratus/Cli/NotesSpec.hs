@@ -2,10 +2,11 @@
 
 module Hstratus.Cli.NotesSpec (spec) where
 
+import Data.Either (isLeft)
 import Hstratus.Cli (TopCommand (..), cliParser)
-import Hstratus.Cli.Notes (ListNotesOpts (..), NotesCommand (..), findFolderByName)
+import Hstratus.Cli.Notes (GetOpts (..), ListNotesOpts (..), NotesCommand (..), findFolderByName)
 import Network.HStratus.Http.Cli (CommonOpts (..))
-import Network.HStratus.Notes.Note (FolderId (..), NoteFolder (..))
+import Network.HStratus.Notes.Note (FolderId (..), NoteFolder (..), NoteId (..))
 import Options.Applicative
   ( ParserResult (..)
   , defaultPrefs
@@ -38,6 +39,18 @@ spec = do
     it "parses notes list-notes --folder NAME" $
       parseCmd ["notes", "list-notes", "--folder", "TukTuk"]
         `endsRight` NotesCmd (NotesListNotes (ListNotesOpts (Just "TukTuk") defaultOpts))
+
+    it "parses notes get NOTE_ID" $
+      parseCmd ["notes", "get", "Note/ABCD-1234"]
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") defaultOpts))
+
+    it "parses notes get NOTE_ID with --china" $
+      parseCmd ["notes", "get", "Note/ABCD-1234", "--china"]
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") defaultOpts{optChina = True}))
+
+    it "rejects notes get with no argument" $ do
+      result <- parseCmd ["notes", "get"]
+      result `shouldSatisfy` isLeft
 
   describe "findFolderByName" $ do
     it "returns Just FolderId on an exact-case match" $
