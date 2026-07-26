@@ -11,6 +11,7 @@ module Network.HStratus.Internal.Notes.Markdown
   )
 where
 
+import qualified Data.IntMap.Strict as IM
 import Data.List (foldl')
 import Data.Text (Text)
 import qualified Data.Text as T
@@ -43,6 +44,15 @@ data RawSegment = RawSegment
   , rsLink :: Maybe Text
   }
   deriving (Eq, Show)
+
+
+-- Internal state for the markdown renderer.
+data RenderState = RenderState
+  { rsCounters :: IM.IntMap Int
+  -- ^ Counter per indent level for numbered lists.
+  , rsPrevStyle :: Maybe NoteStyle
+  -- ^ Style of the previous paragraph, for numbered-list group-start detection.
+  }
 
 
 -- Internal fold state.
@@ -154,40 +164,98 @@ replaceAttachment mId = T.replace "\xFFFC" placeholder
 
 {- | Render a 'NoteText' as Markdown.
 
-Paragraphs are separated by double newlines.  Empty paragraphs are dropped.
+Consecutive list paragraphs are separated by a single newline; all other
+paragraph boundaries use a double newline.  Empty paragraphs are dropped.
 Supported paragraph styles:
 
-* 'StyleTitle'       → @# …@
-* 'StyleHeading'     → @## …@
-* 'StyleSubheading'  → @### …@
-* 'StyleBody True'   → @> …@ (block-quote)
+* 'StyleTitle'         → @# …@
+* 'StyleHeading'       → @## …@
+* 'StyleSubheading'    → @### …@
+* 'StyleBody True'     → @> …@ (block-quote)
+* 'StyleBullet i'      → @- …@ (indented by @i × 2@ spaces)
+* 'StyleDash i'        → @- …@ (indented by @i × 2@ spaces)
+* 'StyleNumbered i ms' → @N. …@ (auto-counter per indent level)
+* 'StyleChecklist i b' → @- [x] …@ or @- [ ] …@
 
-All other styles (including list and monospaced styles) render as plain body
-text; dedicated rendering for those styles is deferred to future steps.
+'StyleMonospaced' is deferred; it renders as plain body text for now.
 
 Inline formatting: bold (@**@), italic (@_@), strikethrough (@~~@),
 link (@[text](url)@).  Underline has no Markdown equivalent and is dropped.
 -}
 noteToMarkdown :: NoteText -> Text
 noteToMarkdown nt =
-  T.intercalate "\n\n" (map renderParagraph (filter hasContent (splitIntoParagraphs nt)))
+  T.concat (go (RenderState{rsCounters = IM.empty, rsPrevStyle = Nothing}) (filter hasContent (splitIntoParagraphs nt)))
+ where
+  go _ [] = []
+  go st [p] =
+    let (_, rendered) = renderParagraphWith st p
+     in [rendered]
+  go st (p : rest@(next : _)) =
+    let (st', rendered) = renderParagraphWith st p
+        sep = if isListPara p && isListPara next then "\n" else "\n\n"
+     in rendered : sep : go st' rest
+
+
+isListPara :: RawParagraph -> Bool
+isListPara RawParagraph{rpStyle} = case rpStyle of
+  Just (StyleBullet _) -> True
+  Just (StyleDash _) -> True
+  Just (StyleNumbered _ _) -> True
+  Just (StyleChecklist _ _) -> True
+  _ -> False
 
 
 hasContent :: RawParagraph -> Bool
 hasContent = any (not . T.null . rsText) . rpSegments
 
 
-renderParagraph :: RawParagraph -> Text
-renderParagraph RawParagraph{rpStyle, rpSegments} =
-  paragraphPrefix rpStyle <> T.concat (map renderSegment rpSegments)
+renderParagraphWith :: RenderState -> RawParagraph -> (RenderState, Text)
+renderParagraphWith st RawParagraph{rpStyle, rpSegments} =
+  let (st', prefix) = resolvePrefix st rpStyle
+      content = T.concat (map renderSegment rpSegments)
+   in (st', prefix <> content)
 
 
-paragraphPrefix :: Maybe NoteStyle -> Text
-paragraphPrefix (Just StyleTitle) = "# "
-paragraphPrefix (Just StyleHeading) = "## "
-paragraphPrefix (Just StyleSubheading) = "### "
-paragraphPrefix (Just (StyleBody True)) = "> "
-paragraphPrefix _ = ""
+resolvePrefix :: RenderState -> Maybe NoteStyle -> (RenderState, Text)
+resolvePrefix st style =
+  let st' = st{rsPrevStyle = style}
+   in case style of
+        Just (StyleBullet i) -> (st', indentText i <> "- ")
+        Just (StyleDash i) -> (st', indentText i <> "- ")
+        Just (StyleChecklist i b) ->
+          (st', indentText i <> if b then "- [x] " else "- [ ] ")
+        Just (StyleNumbered i ms) ->
+          let (n, counters') = nextCounter (rsCounters st) i ms (rsPrevStyle st)
+           in (st'{rsCounters = counters'}, indentText i <> T.pack (show n) <> ". ")
+        _ -> (st', staticPrefix style)
+
+
+staticPrefix :: Maybe NoteStyle -> Text
+staticPrefix (Just StyleTitle) = "# "
+staticPrefix (Just StyleHeading) = "## "
+staticPrefix (Just StyleSubheading) = "### "
+staticPrefix (Just (StyleBody True)) = "> "
+staticPrefix _ = ""
+
+
+{- | Returns the counter value to emit and the updated counter map.
+Group-start (first item or resume after non-numbered paragraph):
+resets to @ms@ (or 1 if absent).  Continuation: uses the running counter,
+ignoring @ms@ even if Apple Notes emits it on every item.
+-}
+nextCounter :: IM.IntMap Int -> Int -> Maybe Int -> Maybe NoteStyle -> (Int, IM.IntMap Int)
+nextCounter counters i ms prevStyle =
+  let isGroupStart = case prevStyle of
+        Just (StyleNumbered j _) -> j /= i
+        _ -> True
+      startVal
+        | isGroupStart = maybe 1 id ms
+        | otherwise = IM.findWithDefault 1 i counters
+   in (startVal, IM.insert i (startVal + 1) counters)
+
+
+indentText :: Int -> Text
+indentText i = T.replicate (max 0 i * 2) " "
 
 
 renderSegment :: RawSegment -> Text

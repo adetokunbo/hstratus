@@ -114,13 +114,115 @@ spec = do
         NoteText{ntText = "first\nsecond", ntRuns = [baseRun{nrLength = 12}]}
         `shouldBe` "first\n\nsecond"
 
-    it "deferred list style renders as plain text" $
+  describe "noteToMarkdown list styles" $ do
+    it "renders StyleBullet 0 as top-level bullet" $
+      noteToMarkdown
+        NoteText{ntText = "item", ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleBullet 0)}]}
+        `shouldBe` "- item"
+
+    it "renders StyleBullet 1 indented by 2 spaces" $
+      noteToMarkdown
+        NoteText{ntText = "nested", ntRuns = [baseRun{nrLength = 6, nrStyle = Just (StyleBullet 1)}]}
+        `shouldBe` "  - nested"
+
+    it "renders StyleBullet 2 indented by 4 spaces" $
+      noteToMarkdown
+        NoteText{ntText = "deep", ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleBullet 2)}]}
+        `shouldBe` "    - deep"
+
+    it "renders StyleDash 0 as top-level bullet" $
+      noteToMarkdown
+        NoteText{ntText = "item", ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleDash 0)}]}
+        `shouldBe` "- item"
+
+    it "separates consecutive list items with a single newline" $
+      noteToMarkdown
+        NoteText
+          { ntText = "first\nsecond"
+          , ntRuns =
+              [ baseRun{nrLength = 6, nrStyle = Just (StyleBullet 0)}
+              , baseRun{nrLength = 6, nrStyle = Just (StyleBullet 0)}
+              ]
+          }
+        `shouldBe` "- first\n- second"
+
+    it "separates a list item from body text with a double newline" $
+      noteToMarkdown
+        NoteText
+          { ntText = "item\nbody"
+          , ntRuns =
+              [ baseRun{nrLength = 5, nrStyle = Just (StyleBullet 0)}
+              , baseRun{nrLength = 4}
+              ]
+          }
+        `shouldBe` "- item\n\nbody"
+
+    it "numbers two consecutive StyleNumbered items" $
+      noteToMarkdown
+        NoteText
+          { ntText = "first\nsecond"
+          , ntRuns =
+              [ baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 0 Nothing)}
+              , baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 0 Nothing)}
+              ]
+          }
+        `shouldBe` "1. first\n2. second"
+
+    it "starts numbered list at ms when ms is Just" $
       noteToMarkdown
         NoteText
           { ntText = "item"
-          , ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleBullet 0)}]
+          , ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleNumbered 0 (Just 3))}]
           }
-        `shouldBe` "item"
+        `shouldBe` "3. item"
+
+    it "resets numbered counter after a non-numbered paragraph" $
+      noteToMarkdown
+        NoteText
+          { ntText = "first\nsecond\nbody\nthird"
+          , ntRuns =
+              [ baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 0 Nothing)}
+              , baseRun{nrLength = 7, nrStyle = Just (StyleNumbered 0 Nothing)}
+              , baseRun{nrLength = 5}
+              , baseRun{nrLength = 5, nrStyle = Just (StyleNumbered 0 Nothing)}
+              ]
+          }
+        `shouldBe` "1. first\n2. second\n\nbody\n\n1. third"
+
+    it "does not reset counter when ms is Just on every item" $
+      noteToMarkdown
+        NoteText
+          { ntText = "first\nsecond"
+          , ntRuns =
+              [ baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 0 (Just 1))}
+              , baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 0 (Just 1))}
+              ]
+          }
+        `shouldBe` "1. first\n2. second"
+
+    it "renders StyleNumbered 1 indented by 2 spaces" $
+      noteToMarkdown
+        NoteText
+          { ntText = "nested"
+          , ntRuns = [baseRun{nrLength = 6, nrStyle = Just (StyleNumbered 1 Nothing)}]
+          }
+        `shouldBe` "  1. nested"
+
+    it "renders StyleChecklist True as checked item" $
+      noteToMarkdown
+        NoteText
+          { ntText = "done"
+          , ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleChecklist 0 True)}]
+          }
+        `shouldBe` "- [x] done"
+
+    it "renders StyleChecklist False as unchecked item" $
+      noteToMarkdown
+        NoteText
+          { ntText = "todo"
+          , ntRuns = [baseRun{nrLength = 4, nrStyle = Just (StyleChecklist 0 False)}]
+          }
+        `shouldBe` "- [ ] todo"
 
   describe "splitIntoParagraphs" $ do
     it "single styled run without newline produces one paragraph" $
