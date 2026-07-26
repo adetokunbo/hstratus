@@ -2,6 +2,14 @@
 {-# LANGUAGE StrictData #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Drive.Node
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Internal types for iCloud Drive nodes: identifiers, file and folder data.
+-}
 module Network.HStratus.Internal.Drive.Node
   ( -- * Node identifier
     DriveNodeId (..)

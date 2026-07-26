@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Network.HStratus.Internal.Notes.Download
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+HTTP fetchers for the iCloud Notes CloudKit endpoints: recent notes, folders,
+notes in a folder, and individual note lookup.
+-}
 module Network.HStratus.Internal.Notes.Download
   ( NotesError (..)
   , fetchFolders

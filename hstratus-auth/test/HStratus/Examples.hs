@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Examples
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Shared example data used across hstratus-auth test suites.
+-}
 module HStratus.Examples
   ( byteStrings
   , wordz

@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Notes.MarkdownSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the Markdown renderer in
+'Network.HStratus.Internal.Notes.Markdown'.
+-}
 module HStratus.Notes.MarkdownSpec (spec) where
 
 import Data.Text (Text)

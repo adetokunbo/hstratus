@@ -5,6 +5,14 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Http.Signin
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Implements the iCloud two-factor sign-in flow: fetching trust data, requesting and verifying SMS codes, and completing sign-in.
+-}
 module Network.HStratus.Internal.Http.Signin
   ( -- * Trust data
     fetchTrustData

@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Notes.EndpointsSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the Notes CloudKit endpoint and request-body builders in
+'Network.HStratus.Internal.Notes.Endpoints'.
+-}
 module HStratus.Notes.EndpointsSpec (spec) where
 
 import Control.Monad (forM_)

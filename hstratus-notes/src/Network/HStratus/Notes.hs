@@ -1,5 +1,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
+{- |
+Module      : Network.HStratus.Notes
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+High-level API for reading iCloud Notes: listing folders, fetching recent
+notes, and downloading note content.
+-}
 module Network.HStratus.Notes
   ( -- * Setup
     NotesApi

@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.NotesSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the top-level Notes API ('Network.HStratus.Notes').
+-}
 module HStratus.NotesSpec (spec) where
 
 import Control.Exception (displayException)

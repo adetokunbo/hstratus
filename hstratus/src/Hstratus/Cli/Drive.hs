@@ -1,5 +1,13 @@
 {-# LANGUAGE TypeApplications #-}
 
+{- |
+Module      : Hstratus.Cli.Drive
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+CLI subcommands for iCloud Drive (list, copy, download).
+-}
 module Hstratus.Cli.Drive
   ( DriveCommand (..)
   , LsOpts (..)

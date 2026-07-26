@@ -3,6 +3,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Trust
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Internal types and functions for two-factor authentication trust management.
+-}
 module Network.HStratus.Internal.Trust
   ( -- * data types
     CodeStatus (..)

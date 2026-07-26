@@ -1,6 +1,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Notes.DecodeSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the protobuf-to-domain decoder in
+'Network.HStratus.Internal.Notes.Decode'.
+-}
 module HStratus.Notes.DecodeSpec (spec) where
 
 import Data.ByteString (ByteString)

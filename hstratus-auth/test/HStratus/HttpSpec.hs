@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.HttpSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the iCloud HTTP client request and response handling.
+-}
 module HStratus.HttpSpec
   ( spec
   )

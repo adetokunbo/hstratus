@@ -2,6 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Http
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Internal HTTP request body builders and SRP authentication context types.
+-}
 module Network.HStratus.Internal.Http
   ( validateSetupBody
   , phoneCodeBody

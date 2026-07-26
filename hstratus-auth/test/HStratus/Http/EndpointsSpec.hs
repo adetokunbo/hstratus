@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Http.EndpointsSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the iCloud endpoint builders in 'Network.HStratus.Internal.Endpoints'.
+-}
 module HStratus.Http.EndpointsSpec (spec) where
 
 import qualified Data.Map.Strict as Map

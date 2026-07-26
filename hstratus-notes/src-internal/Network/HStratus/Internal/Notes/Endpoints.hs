@@ -1,6 +1,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Network.HStratus.Internal.Notes.Endpoints
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Constructs HTTP requests and JSON request bodies for the iCloud Notes
+CloudKit API.
+-}
 module Network.HStratus.Internal.Notes.Endpoints
   ( NotesEndpoints
   , mkNotesEndpoints

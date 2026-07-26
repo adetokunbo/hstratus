@@ -2,6 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{- |
+Module      : Main
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Test suite entry point for hstratus-drive.
+-}
 module Main where
 
 import qualified HStratus.Drive.EndpointsSpec as DriveEndpoints

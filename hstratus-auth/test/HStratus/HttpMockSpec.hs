@@ -3,6 +3,14 @@
 
 {- HLINT ignore "Use lambda-case" -}
 
+{- |
+Module      : HStratus.HttpMockSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the iCloud HTTP client using a mock server.
+-}
 module HStratus.HttpMockSpec (spec) where
 
 import Control.Exception (try)

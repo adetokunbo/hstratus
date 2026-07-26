@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.DriveSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Integration tests for the iCloud Drive API client.
+-}
 module HStratus.DriveSpec (spec) where
 
 import Control.Exception (displayException)
