@@ -39,6 +39,7 @@ library hstratus-notes-internal
     Network.HStratus.Internal.Notes.Decode
     Network.HStratus.Internal.Notes.Download
     Network.HStratus.Internal.Notes.Endpoints
+    Network.HStratus.Internal.Notes.Markdown
     Network.HStratus.Internal.Notes.Note
     Network.HStratus.Internal.Notes.NoteData
     Network.HStratus.Internal.Notes.Proto
@@ -84,6 +85,7 @@ test-suite test
     HStratus.Notes.CloudKitSpec
     HStratus.Notes.DecodeSpec
     HStratus.Notes.EndpointsSpec
+    HStratus.Notes.MarkdownSpec
     HStratus.Notes.NoteDataSpec
     HStratus.Notes.ProtoSpec
     HStratus.Notes.TestHelper
