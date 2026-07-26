@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Notes.CloudKitSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the CloudKit JSON response decoders in
+'Network.HStratus.Internal.Notes.CloudKit'.
+-}
 module HStratus.Notes.CloudKitSpec (spec) where
 
 import Data.Aeson (FromJSON, eitherDecode)

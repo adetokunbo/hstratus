@@ -3,6 +3,14 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Module      : HStratus.LoginFSMSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the iCloud login finite state machine in 'Network.HStratus.Internal.LoginFSM'.
+-}
 module HStratus.LoginFSMSpec
   ( spec
   )

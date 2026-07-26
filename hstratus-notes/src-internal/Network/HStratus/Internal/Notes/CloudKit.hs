@@ -6,6 +6,15 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{- |
+Module      : Network.HStratus.Internal.Notes.CloudKit
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+CloudKit JSON response types for the Notes CloudKit endpoints, including
+records, assets, zone-change responses, and query responses.
+-}
 module Network.HStratus.Internal.Notes.CloudKit
   ( CKZoneId (..)
   , CKRecordRef (..)

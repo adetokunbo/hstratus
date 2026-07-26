@@ -1,8 +1,15 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
--- Converts gzip-compressed protobuf note bodies to the domain NoteText type.
--- This is the bridge between Internal.Notes.Proto (wire representation) and
--- the public NoteText/NoteRun/NoteStyle types.
+{- |
+Module      : Network.HStratus.Internal.Notes.Decode
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Decodes a gzip-compressed protobuf note body into the 'NoteText' domain type,
+bridging the wire representation in "Network.HStratus.Internal.Notes.Proto"
+and the public 'NoteText', 'NoteRun', and 'NoteStyle' types.
+-}
 module Network.HStratus.Internal.Notes.Decode
   ( decodeNoteBody
   )

@@ -1,3 +1,11 @@
+{- |
+Module      : Hstratus.Cli
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Top-level CLI parser and dispatch for the hstratus command-line tool.
+-}
 module Hstratus.Cli
   ( TopCommand (..)
   , cliParser

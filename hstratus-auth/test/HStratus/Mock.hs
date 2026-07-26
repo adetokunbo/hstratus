@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Mock
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+A configurable mock iCloud server for hstratus-auth integration tests.
+-}
 module HStratus.Mock
   ( Scenario (..)
   , SrpOutcome (..)

@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : Network.HStratus.Internal.Notes.NoteData
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Converts raw CloudKit records into the Notes domain types ('NoteSummary',
+'NoteFolder', 'Note').
+-}
 module Network.HStratus.Internal.Notes.NoteData
   ( noteRecordToSummary
   , noteRecordToFolder

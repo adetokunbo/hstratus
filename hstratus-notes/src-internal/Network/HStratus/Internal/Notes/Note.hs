@@ -1,5 +1,15 @@
 {-# LANGUAGE StrictData #-}
 
+{- |
+Module      : Network.HStratus.Internal.Notes.Note
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Domain types for iCloud Notes: note and folder identifiers, note summaries
+and full notes, and the structured note-body representation ('NoteText',
+'NoteRun', 'NoteStyle').
+-}
 module Network.HStratus.Internal.Notes.Note
   ( NoteId (..)
   , FolderId (..)

@@ -1,8 +1,15 @@
--- Orphan Arbitrary instances for proto and domain types used in property tests.
--- Import this module to bring the instances into scope; nothing else is exported.
 {-# LANGUAGE NamedFieldPuns #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+{- |
+Module      : HStratus.Notes.Arbitraries
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Orphan 'Arbitrary' instances for proto and domain types used in property tests.
+Import this module to bring the instances into scope; nothing else is exported.
+-}
 module HStratus.Notes.Arbitraries () where
 
 import qualified Data.Text as T

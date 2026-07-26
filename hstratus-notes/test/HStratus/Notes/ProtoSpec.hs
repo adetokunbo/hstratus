@@ -1,5 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Notes.ProtoSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the proto3-wire decoders in
+'Network.HStratus.Internal.Notes.Proto'.
+-}
 module HStratus.Notes.ProtoSpec (spec) where
 
 import Data.ByteString (ByteString)

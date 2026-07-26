@@ -1,5 +1,13 @@
 {-# LANGUAGE TypeApplications #-}
 
+{- |
+Module      : Hstratus.Cli.Notes
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+CLI subcommands for iCloud Notes (list, get, render).
+-}
 module Hstratus.Cli.Notes
   ( NotesCommand (..)
   , ListNotesOpts (..)

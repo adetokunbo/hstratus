@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Http.HeadersSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for HTTP header handling in the iCloud authentication flow.
+-}
 module HStratus.Http.HeadersSpec (spec) where
 
 import Data.Aeson (decode, encodeFile)

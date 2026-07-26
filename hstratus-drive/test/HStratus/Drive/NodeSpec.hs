@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Drive.NodeSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for iCloud Drive node JSON decoding and data model.
+-}
 module HStratus.Drive.NodeSpec (spec) where
 
 import Data.Aeson (Value, eitherDecode)

@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Drive.UploadSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for the iCloud Drive file upload workflow.
+-}
 module HStratus.Drive.UploadSpec (spec) where
 
 import Data.Aeson (object)

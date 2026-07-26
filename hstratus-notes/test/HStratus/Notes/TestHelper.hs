@@ -1,8 +1,15 @@
--- Programmatic proto/gzip fixture builders for ProtoSpec and DecodeSpec.
--- Avoids hand-crafted byte literals by encoding with Proto3.Wire.Encode and
--- compressing with GZip.compress.
 {-# LANGUAGE NamedFieldPuns #-}
 
+{- |
+Module      : HStratus.Notes.TestHelper
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Programmatic proto\/gzip fixture builders for 'ProtoSpec' and 'DecodeSpec':
+encodes domain values with @proto3-wire@ and compresses with @zlib@, avoiding
+hand-crafted byte literals.
+-}
 module HStratus.Notes.TestHelper
   ( mkNote
   , mkNoteGzip
@@ -101,8 +108,9 @@ psBlockQuote = Encode.int32 8 1
 
 -- Encoder functions -------------------------------------------------------
 
--- | Encode a 'ProtoParagraphStyle' back to wire bytes, reusing the ps* helpers.
--- Proto3 default values (0 / False / Nothing) are omitted to match wire convention.
+{- | Encode a 'ProtoParagraphStyle' back to wire bytes, reusing the ps* helpers.
+Proto3 default values (0 / False / Nothing) are omitted to match wire convention.
+-}
 encodeParagraphStyle :: ProtoParagraphStyle -> Encode.MessageBuilder
 encodeParagraphStyle ProtoParagraphStyle{ppsStyleType, ppsIndent, ppsChecked, ppsListStart, ppsBlockQuote} =
   (if ppsStyleType /= 0 then psStyleType ppsStyleType else mempty)
@@ -112,9 +120,10 @@ encodeParagraphStyle ProtoParagraphStyle{ppsStyleType, ppsIndent, ppsChecked, pp
     <> (if ppsBlockQuote then psBlockQuote else mempty)
 
 
--- | Encode a 'NoteStyle' as a paragraph_style sub-message.
--- Inverse of 'toNoteStyle'; 'StyleBody False' is not in the image of
--- 'toNoteStyle' and should not appear in generated test data.
+{- | Encode a 'NoteStyle' as a paragraph_style sub-message.
+Inverse of 'toNoteStyle'; 'StyleBody False' is not in the image of
+'toNoteStyle' and should not appear in generated test data.
+-}
 encodeNoteStyle :: NoteStyle -> Encode.MessageBuilder
 encodeNoteStyle style = encodeParagraphStyle $ case style of
   StyleTitle -> ProtoParagraphStyle 0 0 Nothing Nothing False
@@ -128,8 +137,9 @@ encodeNoteStyle style = encodeParagraphStyle $ case style of
   StyleChecklist i c -> ProtoParagraphStyle 103 (fromIntegral i) (Just c) Nothing False
 
 
--- | Encode a 'NoteRun' as an AttributeRun sub-message.
--- 'nrLink' is always 'Nothing' in generated runs (deferred).
+{- | Encode a 'NoteRun' as an AttributeRun sub-message.
+'nrLink' is always 'Nothing' in generated runs (deferred).
+-}
 encodeNoteRun :: NoteRun -> Encode.MessageBuilder
 encodeNoteRun NoteRun{nrLength, nrStyle, nrBold, nrItalic, nrUnderline, nrStrikethrough, nrAttachmentId, nrLink} =
   Encode.int32 1 nrLength

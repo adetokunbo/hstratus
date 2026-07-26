@@ -1,5 +1,13 @@
 {-# LANGUAGE LambdaCase #-}
 
+{- |
+Module      : Hstratus.Cli.Auth
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+CLI subcommands for iCloud authentication (login, logout, status).
+-}
 module Hstratus.Cli.Auth
   ( AuthCommand (..)
   , authParser

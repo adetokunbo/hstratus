@@ -1,36 +1,17 @@
--- Hand-written proto3 wire decoders for the Notes protobuf schema.
---
--- Normally these would be generated from notes.proto by a tool (protoc +
--- plugin, or proto3-suite's code-gen mode).  We use proto3-wire's lower-level
--- Parser API directly because the schema has non-consecutive field numbers
--- throughout (e.g. Note.note_text = 2, attribute_run = 5), and proto3-suite's
--- Generic Message derivation assigns field numbers by declaration order, which
--- would silently misdecode those gaps.  With explicit `at N` calls we bind
--- each record field to its actual proto field number.
---
--- The relevant message chain (from notes.proto):
---
---   NoteStoreProto
---     document = 2 : Document
---       note = 3 : Note
---         note_text = 2 : string
---         attribute_run = 5 : repeated AttributeRun
---           length = 1 : int32
---           paragraph_style = 2 : ParagraphStyle
---             style_type = 1 : int32   (StyleType enum)
---             indent_amount = 4 : int32
---             checklist = 5 : Checklist
---               done = 2 : int32
---             starting_list_item_number = 7 : int32
---             block_quote = 8 : int32
---           font_weight = 5 : int32    (FontWeight enum: 1=bold, 2=italic, 3=both)
---           underlined = 6 : int32
---           strikethrough = 7 : int32
---           attachment_info = 12 : AttachmentInfo
---             attachment_identifier = 1 : string
---           link = 9 : string
---
--- Fields not listed here are silently ignored by the wire decoder.
+{- |
+Module      : Network.HStratus.Internal.Notes.Proto
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Hand-written proto3-wire decoders for the Apple Notes protobuf schema.
+
+Uses proto3-wire's lower-level @Parser@ API rather than code generation
+because the schema has non-consecutive field numbers (e.g. @note_text = 2@,
+@attribute_run = 5@); explicit @\`at\` N@ bindings prevent the silent
+field-number mismatches that Generic derivation would introduce.
+Fields not listed in the decoders are silently ignored by the wire decoder.
+-}
 module Network.HStratus.Internal.Notes.Proto
   ( ProtoNote (..)
   , ProtoAttributeRun (..)

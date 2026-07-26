@@ -1,5 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+{- |
+Module      : HStratus.Drive.MutationSpec
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Tests for iCloud Drive mutation operations (rename, move, delete).
+-}
 module HStratus.Drive.MutationSpec (spec) where
 
 import Data.Aeson (object)

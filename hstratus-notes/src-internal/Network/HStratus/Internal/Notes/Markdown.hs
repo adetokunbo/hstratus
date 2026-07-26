@@ -1,8 +1,16 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- Phase 1: split a 'NoteText' into paragraphs ('splitIntoParagraphs').
--- Phase 2: render paragraphs as Markdown text ('noteToMarkdown').
+{- |
+Module      : Network.HStratus.Internal.Notes.Markdown
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Two-phase Markdown renderer for decoded note bodies: Phase 1 splits a
+'NoteText' into paragraphs ('splitIntoParagraphs'); Phase 2 renders them
+as Markdown text ('noteToMarkdown').
+-}
 module Network.HStratus.Internal.Notes.Markdown
   ( RawParagraph (..)
   , RawSegment (..)
