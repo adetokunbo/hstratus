@@ -51,13 +51,17 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 
 
+-- | Convert a millisecond-precision POSIX timestamp to 'UTCTime'.
 parseMillisTimestamp :: Int64 -> UTCTime
 parseMillisTimestamp ms = posixSecondsToUTCTime (fromIntegral ms / 1000)
 
 
+-- | CloudKit zone identifier.
 data CKZoneId = CKZoneId
   { czName :: Text
+  -- ^ zone name (e.g. @Notes@)
   , czType :: Text
+  -- ^ zone type (e.g. @REGULAR_CUSTOM_ZONE@)
   }
   deriving (Eq, Show)
 
@@ -69,9 +73,12 @@ instance FromJSON CKZoneId where
       <*> o .: "zoneType"
 
 
+-- | A reference to another CloudKit record.
 data CKRecordRef = CKRecordRef
   { rrRecordName :: Text
+  -- ^ @recordName@ of the referenced record
   , rrAction :: Text
+  -- ^ referential integrity action (e.g. @NONE@, @DELETE_SELF@)
   }
   deriving (Eq, Show)
 
@@ -83,12 +90,18 @@ instance FromJSON CKRecordRef where
       <*> o .: "action"
 
 
+-- | A CloudKit asset: an encrypted file attachment associated with a record.
 data CKAsset = CKAsset
   { caDownloadUrl :: Text
+  -- ^ pre-signed URL from which the asset content can be downloaded
   , caFileChecksum :: Text
+  -- ^ SHA-256 checksum of the encrypted asset content
   , caRefChecksum :: Text
+  -- ^ reference checksum used when committing an upload
   , caWrappingKey :: Text
+  -- ^ encryption wrapping key for the asset
   , caSize :: Int64
+  -- ^ byte size of the encrypted asset content
   }
   deriving (Eq, Show)
 
@@ -103,9 +116,12 @@ instance FromJSON CKAsset where
       <*> o .: "size"
 
 
+-- | A CloudKit creation or modification timestamp with the responsible user.
 data CKTimestamp = CKTimestamp
   { ctTimestamp :: Int64
+  -- ^ millisecond-precision POSIX timestamp
   , ctUserRecordName :: Text
+  -- ^ @recordName@ of the user who created or last modified the record
   }
   deriving (Eq, Show)
 
@@ -159,15 +175,24 @@ matchField typ o = do
   o .: "value"
 
 
+-- | A single typed field value in a CloudKit record.
 data CKField
-  = CKStringField Text
-  | CKInt64Field Int64
-  | CKTimestampField Int64
-  | CKEncryptedBytesField Text
-  | CKReferenceField CKRecordRef
-  | CKReferenceListField [CKRecordRef]
-  | CKAssetIdField CKAsset
-  | CKUnknownField Text Value
+  = -- | a plain text (@STRING@) field value
+    CKStringField Text
+  | -- | a 64-bit integer (@INT64@) field value
+    CKInt64Field Int64
+  | -- | a millisecond POSIX timestamp (@TIMESTAMP@) field value
+    CKTimestampField Int64
+  | -- | an encrypted bytes (@ENCRYPTED_BYTES@) field, base64-encoded
+    CKEncryptedBytesField Text
+  | -- | a single record reference (@REFERENCE@) field value
+    CKReferenceField CKRecordRef
+  | -- | a list of record references (@REFERENCE_LIST@) field value
+    CKReferenceListField [CKRecordRef]
+  | -- | an asset identifier (@ASSETID@) field value
+    CKAssetIdField CKAsset
+  | -- | a field with an unrecognised type tag and its raw JSON value
+    CKUnknownField Text Value
   deriving (Eq, Show)
 
 
@@ -186,15 +211,24 @@ instance FromJSON CKField where
       ]
 
 
+-- | A CloudKit record with its name, type, fields, and metadata.
 data CKRecord = CKRecord
   { crName :: Text
+  -- ^ unique identifier for the record within its zone
   , crType :: Maybe Text
+  -- ^ record type (e.g. @Note@, @Folder@); @Nothing@ in delete tombstones
   , crChangeTag :: Maybe Text
+  -- ^ opaque version tag used for conflict detection
   , crZoneId :: Maybe CKZoneId
+  -- ^ zone containing this record; @Nothing@ in some response shapes
   , crFields :: Map Text CKField
+  -- ^ typed field values keyed by field name; empty when the record is deleted
   , crCreated :: Maybe CKTimestamp
+  -- ^ creation timestamp and user; @Nothing@ when absent
   , crModified :: Maybe CKTimestamp
+  -- ^ last-modification timestamp and user; @Nothing@ when absent
   , crDeleted :: Maybe Bool
+  -- ^ @Just True@ for delete tombstones; @Nothing@ otherwise
   }
   deriving (Eq, Show)
 
@@ -212,9 +246,12 @@ instance FromJSON CKRecord where
       <*> o .:? "deleted"
 
 
+-- | Response body for a CloudKit record query.
 data CKQueryResponse = CKQueryResponse
   { qrRecords :: [CKRecord]
+  -- ^ records returned by the query
   , qrContinuationMarker :: Maybe Value
+  -- ^ pagination cursor; @Nothing@ when all results fit in one response
   }
   deriving (Eq, Show)
 
@@ -226,9 +263,12 @@ instance FromJSON CKQueryResponse where
       <*> o .:? "continuationMarker"
 
 
+-- | Response body for a CloudKit record lookup by name.
 data CKLookupResponse = CKLookupResponse
   { lrRecords :: [CKRecord]
+  -- ^ records returned by the lookup, in the same order as the request
   , lrSyncToken :: Maybe Text
+  -- ^ sync token for subsequent zone-changes requests; @Nothing@ when absent
   }
   deriving (Eq, Show)
 
@@ -240,11 +280,16 @@ instance FromJSON CKLookupResponse where
       <*> o .:? "syncToken"
 
 
+-- | Per-zone section of a CloudKit zone-changes response.
 data CKZoneChangesZone = CKZoneChangesZone
   { zczZoneId :: CKZoneId
+  -- ^ identifier of the zone these changes belong to
   , zczSyncToken :: Maybe Text
+  -- ^ opaque token for the next zone-changes request for this zone
   , zczMoreComing :: Maybe Bool
+  -- ^ @Just True@ when further pages of changes remain for this zone
   , zczRecords :: [CKRecord]
+  -- ^ records that changed (or were deleted) in this zone
   }
   deriving (Eq, Show)
 
@@ -258,8 +303,10 @@ instance FromJSON CKZoneChangesZone where
       <*> o .:? "records" .!= []
 
 
+-- | Top-level response body for a CloudKit zone-changes request.
 newtype CKZoneChangesResponse = CKZoneChangesResponse
   { zcrZones :: [CKZoneChangesZone]
+  -- ^ per-zone change sets included in this response
   }
   deriving (Eq, Show)
 
