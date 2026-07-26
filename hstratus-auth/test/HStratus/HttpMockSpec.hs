@@ -1,8 +1,6 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-{- HLINT ignore "Use lambda-case" -}
-
 {- |
 Module      : HStratus.HttpMockSpec
 Copyright   : (c) 2026 Tim Emiola
@@ -78,12 +76,10 @@ spec = describe "Network.HStratus.Http.login" $ do
 
   it "throws UnexpectedResponse with HTTP status when error response has no body" $
     withFreshMockApi "icloud-auth-empty-err" defaultScenario{snSrpCompleteEmptyError = True} $ \api -> do
+      let throwsBadRequest (Left (UnexpectedResponse msg)) = "bad request" `Text.isPrefixOf` msg
+          throwsBadRequest _otherwise = False
       result <- try (login api) :: IO (Either AuthError AuthState)
-      result
-        `shouldSatisfy` ( \r -> case r of
-                            Left (UnexpectedResponse msg) -> "bad request" `Text.isPrefixOf` msg
-                            _ -> False
-                        )
+      result `shouldSatisfy` throwsBadRequest
 
   it "complete2SA retries when the first verification code is wrong" $ do
     codeRef <- newIORef ["wrongcode", "0"]
@@ -119,7 +115,7 @@ spec = describe "Network.HStratus.Http.login" $ do
             [] -> fail "no more codes"
             (c : rest) -> writeIORef codeRef rest >> pure c
     withFreshMockApi "icloud-auth-2fa-retry" defaultScenario{snAccountLoginNeeds2FA = 1, snVerifyDeviceCodeFails = True} $ \api ->
-      isAuthenticated <$> loginWith (\_ -> readCode) (\_ -> pure Nothing) (\_ -> pure testDevice) api
+      isAuthenticated <$> loginWith (const readCode) (\_ -> pure Nothing) (\_ -> pure testDevice) api
         `shouldReturn` True
 
   it "retries signin/init and completes login when first response is 421" $
@@ -134,7 +130,7 @@ spec = describe "Network.HStratus.Http.login" $ do
   it "throws TwoFactorLocked when the server signals the account is locked" $
     withFreshMockApi "icloud-auth-2fa-locked" defaultScenario{snAccountLoginNeeds2FA = 1, snVerifyCodeLocks = True} $ \api -> do
       result <- try (loginWith (\_ -> pure "wrongcode") (\_ -> pure Nothing) (\_ -> pure testDevice) api) :: IO (Either AuthError AuthState)
-      result `shouldSatisfy` (\r -> case r of Left TwoFactorLocked -> True; _ -> False)
+      result `shouldSatisfy` (\case Left TwoFactorLocked -> True; _ -> False)
 
 
 withMockApi :: FilePath -> Scenario -> (Api -> IO a) -> IO a
