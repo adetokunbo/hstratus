@@ -37,12 +37,16 @@ import System.Exit (exitFailure)
 import System.IO (IOMode (..), hFlush, hSetEcho, stdin, stdout, withFile)
 
 
+-- | Top-level auth subcommand.
 data AuthCommand
-  = AuthInit
-  | AuthLogin CommonOpts
+  = -- | save Apple ID credentials to the config directory
+    AuthInit
+  | -- | authenticate with iCloud
+    AuthLogin CommonOpts
   deriving (Eq, Show)
 
 
+-- | Optparse-applicative parser for the @auth@ subcommand.
 authParser :: Parser AuthCommand
 authParser =
   subparser
@@ -51,6 +55,7 @@ authParser =
     )
 
 
+-- | Dispatch an 'AuthCommand' to its handler.
 runAuth :: AuthCommand -> IO ()
 runAuth = \case
   AuthInit -> runInit

@@ -79,6 +79,7 @@ nthOf :: NonEmpty a -> Int -> a
 nthOf xs idx = toList xs !! (idx - 1)
 
 
+-- | Prompt the user to choose one device from a non-empty list of trusted devices.
 selectDevice :: NonEmpty TrustedDevice -> IO TrustedDevice
 selectDevice xs = do
   Text.putStrLn "Please select a trusted device to send a code to"
@@ -87,6 +88,7 @@ selectDevice xs = do
   pure (nthOf xs idx)
 
 
+-- | Prompt the user to choose one phone number from a non-empty list of trusted phones.
 selectPhone :: NonEmpty TrustedPhone -> IO TrustedPhone
 selectPhone xs = do
   let putPhoneChoice (i, x) = Text.putStrLn $ Text.pack (show i) <> ") " <> tpnNumberWithDialCode x
@@ -96,6 +98,7 @@ selectPhone xs = do
   pure (nthOf xs idx)
 
 
+-- | Prompt the user to enter an integer in the inclusive range @[low, high]@, retrying on invalid input.
 pleaseChooseN :: Int -> Int -> IO Int
 pleaseChooseN low high = do
   let prefix = "Please choose an option between " <> show low <> " and " <> show high
@@ -111,19 +114,25 @@ pleaseChooseN low high = do
     | otherwise = throwIO e
 
 
+-- | Prompt the user to enter a security code of the given length.
 pleaseReadCode :: Word8 -> IO Text
 pleaseReadCode len = do
   let prefix = "Please enter the " <> show len <> "-digit code you just received"
   Text.pack <$> promptNonEmpty prefix
 
 
--- | Information describing the status of the security code verifiction
+-- | Information describing the status of the security code verification
 data CodeStatus = CodeStatus
   { scLength :: !Word8
+  -- ^ expected number of digits in the security code
   , scTooManyCodesSent :: !Bool
+  -- ^ @True@ when Apple has refused to send further codes
   , scTooManyCodesValidated :: !Bool
+  -- ^ @True@ when the verification attempt limit has been reached
   , scSecurityCodeLocked :: !Bool
+  -- ^ @True@ when the security code gate is locked
   , scSecurityCodeCooldown :: !Bool
+  -- ^ @True@ when a cooldown period is active before a new code can be sent
   }
   deriving (Eq, Show, Generic)
 
@@ -143,10 +152,14 @@ instance ToJSON CodeStatus where
   toEncoding = genericToEncoding simpleOptions
 
 
+-- | A trusted phone number registered for two-factor verification
 data TrustedPhone = TrustedPhone
   { tpnId :: !Word8
+  -- ^ Apple's internal identifier for this phone number
   , tpnNumberWithDialCode :: !Text
+  -- ^ display string including the country dial code, e.g. @"+1 (•••) •••-1234"@
   , tpnPushMode :: !(Maybe Text)
+  -- ^ push delivery mode (e.g. @"sms"@); @Nothing@ when absent
   }
   deriving (Eq, Show, Generic)
 
@@ -163,8 +176,11 @@ instance ToJSON TrustedPhone where
 -- | Information about a trusted device
 data TrustedDevice = TrustedDevice
   { tdId :: !Text
+  -- ^ Apple's internal identifier for this device
   , tdName :: !Text
+  -- ^ human-readable device name, e.g. @"Tim's iPhone"@
   , tdModelName :: !Text
+  -- ^ model string, e.g. @"iPhone 15 Pro"@; empty string when absent
   }
   deriving (Eq, Show, Generic)
 
@@ -184,8 +200,10 @@ instance ToJSON TrustedDevice where
 
 -- | A non-empty list of @TrustedPhone@ or @TrustedDevice@
 data TrustedList
-  = TrustedPhoneNumbers !(NonEmpty TrustedPhone)
-  | TrustedDevices !(NonEmpty TrustedDevice)
+  = -- | the account has trusted phone numbers but no trusted devices
+    TrustedPhoneNumbers !(NonEmpty TrustedPhone)
+  | -- | the account has trusted devices (and may also have trusted phone numbers)
+    TrustedDevices !(NonEmpty TrustedDevice)
   deriving (Eq, Show, Generic)
 
 
@@ -257,6 +275,7 @@ instance FromJSON TrustData where
   parseJSON = parseJSONTrustData
 
 
+-- | An opaque device record used in the legacy 2SA flow; fields are Apple-defined JSON.
 newtype Setup2SADevice = Setup2SADevice {setup2SAFields :: Object}
   deriving (Eq, Show)
 
@@ -269,6 +288,7 @@ instance ToJSON Setup2SADevice where
   toJSON (Setup2SADevice o) = Object o
 
 
+-- | Extract a human-readable label from a 2SA setup device, falling back to @"(unknown)"@.
 setup2SADeviceLabel :: Setup2SADevice -> Text
 setup2SADeviceLabel (Setup2SADevice o) = fromMaybe "(unknown)" $ do
   v <- lookup "phoneNumber" pairs <|> lookup "name" pairs
@@ -279,6 +299,7 @@ setup2SADeviceLabel (Setup2SADevice o) = fromMaybe "(unknown)" $ do
   pairs = KeyMap.toList o
 
 
+-- | Select a trusted phone from 'TrustData' for 2FA, prompting the user when multiple phones are available.  Returns 'Nothing' when the user opts for a trusted device instead.
 selectTwoFaPhone :: TrustData -> IO (Maybe TrustedPhone)
 selectTwoFaPhone td =
   let phones = case tdList td of
@@ -302,6 +323,7 @@ selectTwoFaPhone td =
         _ -> pickPhoneOrDevice phones
 
 
+-- | Prompt the user to choose a trusted device to receive a legacy 2SA verification code.
 selectSetupDevice :: NonEmpty Setup2SADevice -> IO Setup2SADevice
 selectSetupDevice xs = do
   Text.putStrLn "Please select a trusted device to receive a verification code"

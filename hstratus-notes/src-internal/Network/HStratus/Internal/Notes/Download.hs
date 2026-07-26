@@ -63,9 +63,12 @@ import Network.HTTP.Client
 import Network.HTTP.Types (hContentType, statusCode)
 
 
+-- | Errors that can occur during iCloud Notes API calls.
 data NotesError
-  = NotesHttpError Int
-  | NotesParseError String
+  = -- | the server returned an unexpected HTTP status code
+    NotesHttpError Int
+  | -- | a JSON response could not be decoded into the expected structure
+    NotesParseError String
 
 
 instance Show NotesError where
@@ -79,6 +82,7 @@ instance Exception NotesError
 instance HStratusError NotesError
 
 
+-- | Fetch all note folders, following continuation markers to retrieve every page.
 fetchFolders :: Api -> NotesEndpoints -> IO [NoteFolder]
 fetchFolders api ep = go Nothing []
  where
@@ -90,6 +94,7 @@ fetchFolders api ep = go Nothing []
       Just m -> go (Just m) acc'
 
 
+-- | Fetch recent note summaries, following continuation markers to retrieve every page.
 fetchRecent :: Api -> NotesEndpoints -> IO [NoteSummary]
 fetchRecent api ep = go Nothing []
  where
@@ -101,12 +106,14 @@ fetchRecent api ep = go Nothing []
       Just m -> go (Just m) acc'
 
 
+-- | Fetch a single note by its 'NoteId'; returns @Nothing@ if the record is absent or cannot be decoded.
 fetchNote :: Api -> NotesEndpoints -> NoteId -> IO (Maybe Note)
 fetchNote api ep nid = do
   lr <- fetchAs "fetchNote" api (jsonReq (lookupBody [unNoteId nid]) (lookupReq ep))
   pure $ listToMaybe $ mapMaybe noteRecordToNote (lrRecords lr)
 
 
+-- | Fetch all non-deleted note summaries belonging to the given folder, paging through zone changes.
 fetchNotesInFolder :: Api -> NotesEndpoints -> FolderId -> IO [NoteSummary]
 fetchNotesInFolder api ep fid = go Nothing []
  where

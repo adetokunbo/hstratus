@@ -2,6 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Drive.Endpoints
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+Request builders and endpoint configuration for the iCloud Drive API.
+-}
 module Network.HStratus.Internal.Drive.Endpoints
   ( DriveEndpoints
   , mkDriveEndpoints

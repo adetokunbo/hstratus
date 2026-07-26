@@ -124,12 +124,19 @@ needed to call the iCloud API.  Created by 'mkApi' or 'mkApiWith'.
 -}
 data Api = Api
   { apiManager :: !Manager
+  -- ^ shared TLS manager used for all requests
   , apiSession :: !Session
+  -- ^ credentials and on-disk session paths
   , apiEndpoints :: !Endpoints
+  -- ^ iCloud service URLs and the widget key
   , apiHashAlgorithm :: !KnownAlgorithm
+  -- ^ hash algorithm used for SRP (always SHA-256 in practice)
   , apiWrappedPseudoRF :: !FancyPseudoRandomF
+  -- ^ PBKDF2 pseudo-random function, pre-wrapped with the hash algorithm
   , apiGroup :: !PrimeGroup
+  -- ^ SRP prime group (always G2048 in practice)
   , apiLogger :: !(Maybe ApiLogger)
+  -- ^ optional logger invoked after every HTTP response
   }
 
 
@@ -350,11 +357,13 @@ asJson resp = case eitherDecode resp of
   Right x -> pure x
 
 
+-- | Extract the successful value from a response, throwing 'UnexpectedResponse' for 4xx\/5xx status codes.
 extractOr' :: Response (ApiResponse a) -> IO a
 extractOr' r | statusCode (responseStatus r) >= 400 = throwIO $ UnexpectedResponse $ showStatusOf r
 extractOr' r = extractOr $ responseBody r
 
 
+-- | Format the HTTP status of a response as a human-readable 'Text' string.
 showStatusOf :: Response a -> Text
 showStatusOf resp =
   let showResponse' x s | x >= 500 = "server error:" <> Text.pack (show s)
@@ -365,6 +374,7 @@ showStatusOf resp =
    in showResponse' theCode theStatus
 
 
+-- | Build the full set of Apple OAuth request headers for an authenticated call.
 authHeaders :: Api -> SavedHeaders -> RequestHeaders
 authHeaders api savedHdrs =
   let Api{apiSession = session, apiEndpoints = ep} = api
@@ -380,6 +390,7 @@ authHeaders api savedHdrs =
    in withAppleOauthHeaders (epWidgetKey ep) $ homeHeaders ep <> sdHeaders <> cidHeader
 
 
+-- | Build the minimal request headers required by the iCloud API: the widget key, session counter, and session ID.
 requiredHeaders :: ByteString -> SavedHeaders -> RequestHeaders
 requiredHeaders key savedHdrs =
   let headerOf name x = (name, toS x)
@@ -392,29 +403,35 @@ requiredHeaders key savedHdrs =
    in withAcceptJson . withWidgetKey key $ sdHeaders
 
 
+-- | Make an authenticated API call with the required session headers, returning the decoded response body or throwing on error.
 callRequiredHeaders :: (FromJSON a) => Api -> Request -> IO a
 callRequiredHeaders api@Api{apiSession = s, apiEndpoints = ep} req = do
   savedHdrs <- loadSavedHeaders s
   callApi api (withHeaders (requiredHeaders (epWidgetKey ep) savedHdrs) req) >>= extractOr'
 
 
+-- | Convert a @Maybe@ to a JSON 'Value', using 'Null' for 'Nothing'.
 maybeValue :: (a -> Value) -> Maybe a -> Value
 maybeValue = maybe Null
 
 
+-- | Build a JSON 'Object' 'Value' from a list of key-value pairs.
 asObject :: [(Key, Value)] -> Value
 asObject = Object . fromList
 
 
+-- | Build a JSON request by combining a base-request builder, a body encoder, and their respective inputs.
 mkJsonRequest :: (a -> Request) -> (b -> Value) -> a -> b -> Request
 mkJsonRequest mkBase mkBody baseSrc bodySrc =
   withJsonRequestHeaders . withBody (encode $ mkBody bodySrc) $ mkBase baseSrc
 
 
+-- | Set @Accept: application/json@ and @Content-Type: application/json@ on a request.
 withJsonRequestHeaders :: Request -> Request
 withJsonRequestHeaders = withHeaders [(hAccept, "application/json"), (hContentType, "application/json")]
 
 
+-- | Build and execute an authenticated API call, applying an optional request modifier, and decode the response.
 callHandlingResponse
   :: (FromJSON a)
   => (Endpoints -> b -> Request)

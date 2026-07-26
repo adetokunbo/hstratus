@@ -47,7 +47,11 @@ import Network.HTTP.Types.Header (HeaderName)
 
 
 -- | Models the known values of password protocol
-data PasswordProtocol = Old | New
+data PasswordProtocol
+  = -- | legacy @s2k_fo@ protocol: password is hex-encoded before hashing
+    Old
+  | -- | current @s2k@ protocol: password is hashed directly
+    New
   deriving (Eq, Show)
 
 
@@ -62,9 +66,13 @@ instance FromJSON PasswordProtocol where
 -- | Data used during key derivation and verification
 data KeyDeriver = KeyDeriver
   { kdTag :: !Text
+  -- ^ SRP session tag from Apple's server response
   , kdIterations :: !Word64
+  -- ^ PBKDF2 iteration count from Apple's server response
   , kdProtocol :: !PasswordProtocol
+  -- ^ password hashing protocol in use for this session
   , kdWrappedF :: !FancyPseudoRandomF
+  -- ^ PBKDF2 pseudo-random function, pre-wrapped with the negotiated hash algorithm
   }
 
 
@@ -87,8 +95,11 @@ calcXUsingKeyDeriver kd fc fs =
 -- | Bundles the SRP client\/server data and key deriver for a single auth attempt
 data SrpContext = SrpContext
   { srpFromClient :: !FromClient
+  -- ^ client-side SRP values (public key, password verifier input)
   , srpFromServer :: !FromServer
+  -- ^ server-side SRP values (salt, public key, hash algorithm)
   , srpKeyDeriver :: !KeyDeriver
+  -- ^ key derivation parameters negotiated during SRP init
   }
 
 
@@ -101,6 +112,7 @@ hTrustToken = mk "X-Apple-TwoSV-Trust-Token"
 hCounter = mk "scnt"
 
 
+-- | Build the JSON body to submit a legacy 2SA verification code for a given device.
 validateSetupBody :: Setup2SADevice -> Text -> Value
 validateSetupBody (Setup2SADevice fields) code =
   Object $ fields <> fromList [("verificationCode", String code), ("trustBrowser", Bool True)]
@@ -116,7 +128,7 @@ phoneTriggerBody tp =
       ]
 
 
--- | True when the HTTP status code warrants a single automatic retry
+-- | @True@ when the HTTP status code warrants a single automatic retry (421, 450, or 500).
 needsRetry :: Int -> Bool
 needsRetry status = status == 421 || status == 450 || status == 500
 

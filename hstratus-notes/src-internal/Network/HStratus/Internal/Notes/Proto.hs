@@ -41,32 +41,40 @@ import Proto3.Wire.Decode
 -- Proto types mirror the schema closely; conversion to domain NoteText/NoteRun
 -- types happens in Decode.hs where gzip decompression also lives.
 
+-- | Top-level note content decoded from the protobuf payload.
 data ProtoNote = ProtoNote
   { pnNoteText :: Text
+  -- ^ full plain-text content of the note (proto field 2)
   , pnAttributeRuns :: [ProtoAttributeRun]
+  -- ^ attribute runs describing inline and paragraph formatting (proto field 5)
   }
   deriving (Eq, Show)
 
 
+-- | A single attribute run from the protobuf schema.
 data ProtoAttributeRun = ProtoAttributeRun
   { parLength :: Int32
+  -- ^ number of UTF-16 code units this run covers
   , parParagraphStyle :: Maybe ProtoParagraphStyle
-  , -- font_weight: 0=none, 1=bold, 2=italic, 3=bold+italic
-    parFontWeight :: Int32
+  -- ^ paragraph-level formatting; @Nothing@ when the run has no paragraph style
+  , parFontWeight :: Int32
+  -- ^ font weight: 0 = none, 1 = bold, 2 = italic, 3 = bold+italic
   , parUnderlined :: Int32
+  -- ^ non-zero when the run is underlined
   , parStrikethrough :: Int32
-  , -- Nothing when attachment_info absent or attachment_identifier empty
-    parAttachmentId :: Maybe LT.Text
-  , -- empty string means no link
-    parLink :: LT.Text
+  -- ^ non-zero when the run has strikethrough
+  , parAttachmentId :: Maybe LT.Text
+  -- ^ attachment identifier; @Nothing@ when absent or empty in the wire bytes
+  , parLink :: LT.Text
+  -- ^ hyperlink URL; empty string when no link is present
   }
   deriving (Eq, Show)
 
 
--- style_type values: 0=title, 1=heading, 2=subheading, 4=monospaced,
--- 100=bullet, 101=dash, 102=numbered, 103=checklist
+-- | Paragraph-level formatting for an attribute run.
 data ProtoParagraphStyle = ProtoParagraphStyle
   { ppsStyleType :: Int32
+  -- ^ style_type field 1: 0=title, 1=heading, 2=subheading, 4=monospaced, 100=bullet, 101=dash, 102=numbered, 103=checklist
   , ppsIndent :: Int32
   -- ^ indent_amount field 4; 0 when absent.
   , ppsChecked :: Maybe Bool

@@ -44,7 +44,9 @@ import Network.HTTP.Types (methodPost)
 -- | Base request for the iCloud Notes CloudKit database API.
 data NotesEndpoints = NotesEndpoints
   { neBaseReq :: !Request
+  -- ^ base request targeting the Notes CloudKit database path
   , neQueryString :: !BS8.ByteString
+  -- ^ shared query string appended to every Notes API request
   }
 
 

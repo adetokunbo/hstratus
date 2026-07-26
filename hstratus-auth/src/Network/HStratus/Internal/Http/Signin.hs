@@ -203,6 +203,7 @@ signinInit api other = do
   callHandlingResponse signinInitReq (withHeaders (authHeaders api savedHdrs)) api other
 
 
+-- | Execute the SRP init step, returning the server's public values and a 'KeyDeriver' for the completion step.
 runSigninInit :: Api -> FromClient -> IO (FromServer, KeyDeriver)
 runSigninInit api fc = do
   r <- signinInit api fc
@@ -245,6 +246,7 @@ data SigninCompletion = SigninCompletion
   }
 
 
+-- | Execute the SRP completion step, sending the client and server proofs to Apple.
 runSigninComplete :: Api -> KeyDeriver -> Results -> IO ()
 runSigninComplete api@Api{apiSession = session} kd results = do
   siSavedHeaders <- loadSavedHeaders session
@@ -299,6 +301,7 @@ handleSigninComplete resp = do
     | otherwise -> pure ()
 
 
+-- | Check whether the current session is still valid; returns @False@ on 401, throws on other errors.
 validate :: Api -> IO Bool
 validate api@Api{apiEndpoints} = do
   resp <- rawRequest api (validateReq apiEndpoints)
@@ -313,6 +316,7 @@ validateReq :: Endpoints -> Request
 validateReq = withJsonRequestHeaders . withBody (encode Null) . validateBase
 
 
+-- | POST to the account-login endpoint and return the raw JSON response (used to obtain 'AccountData').
 accountLogin :: Api -> IO Value
 accountLogin api@Api{apiEndpoints = ep} = do
   savedHdrs <- loadSavedHeaders $ apiSession api
@@ -324,6 +328,7 @@ accountLoginReq :: Endpoints -> SavedHeaders -> Request
 accountLoginReq = mkJsonRequest accountLoginBase accountLoginValue
 
 
+-- | Trigger a 2FA push notification to the user's trusted device.
 triggerTwoFaPush :: Api -> IO ()
 triggerTwoFaPush api@Api{apiEndpoints = ep} = do
   savedHdrs <- loadSavedHeaders (apiSession api)
@@ -335,6 +340,7 @@ triggerTwoFaPush api@Api{apiEndpoints = ep} = do
     throwIO (UnexpectedResponse ("2FA push failed: " <> toS (show e)))
 
 
+-- | POST to the two-step-verification trust endpoint to mark this session as trusted.
 doTrustStep :: Api -> IO ()
 doTrustStep api@Api{apiEndpoints = ep} = do
   savedHdrs <- loadSavedHeaders (apiSession api)
@@ -346,6 +352,7 @@ doTrustStep api@Api{apiEndpoints = ep} = do
         showStatusOf resp
 
 
+-- | Submit a 2FA code entered by the user; returns @True@ when accepted, @False@ on a 400 rejection.
 verifyTwoFaCode :: Api -> AuthCode -> IO Bool
 verifyTwoFaCode api@Api{apiEndpoints = ep} code = do
   savedHdrs <- loadSavedHeaders (apiSession api)
@@ -380,12 +387,14 @@ instance FromJSON ListDevicesReply where
   parseJSON = withObject "ListDevicesReply" $ \o -> ListDevicesReply <$> o .: "devices"
 
 
+-- | Fetch the list of trusted devices available for legacy 2SA verification; throws when the server returns none.
 listSetupDevices :: Api -> IO (NonEmpty Setup2SADevice)
 listSetupDevices api@Api{apiEndpoints = ep} = do
   devices <- ldrDevices <$> callRequiredHeaders api (listDevices ep)
   maybe (throwIO (UnexpectedResponse "2SA: server returned no trusted devices")) pure (NE.nonEmpty devices)
 
 
+-- | Send a 2SA verification code to the given device.
 sendSetupVerification :: Api -> Setup2SADevice -> IO ()
 sendSetupVerification api@Api{apiSession = s, apiEndpoints = ep} device = do
   savedHdrs <- loadSavedHeaders s
@@ -398,6 +407,7 @@ sendSetupVerification api@Api{apiSession = s, apiEndpoints = ep} device = do
   unless (statusCode (responseStatus resp) < 400) $ throwIO $ UnexpectedResponse $ showStatusOf resp
 
 
+-- | Submit a 2SA verification code for the given device; returns @True@ when accepted.
 validateSetupVerification :: Api -> Setup2SADevice -> AuthCode -> IO Bool
 validateSetupVerification api@Api{apiSession = s, apiEndpoints = ep} device code = do
   savedHdrs <- loadSavedHeaders s
