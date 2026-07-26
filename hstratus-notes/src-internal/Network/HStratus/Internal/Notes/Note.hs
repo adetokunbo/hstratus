@@ -100,6 +100,8 @@ data NoteRun = NoteRun
   -- ^ 'True' when the run is underlined.
   , nrStrikethrough :: Bool
   -- ^ 'True' when the run is struck through.
+  , nrAttachmentId :: Maybe Text
+  -- ^ CloudKit attachment identifier, present when the run covers a @\xFFFC@ placeholder.
   , nrLink :: Maybe Text
   -- ^ Hyperlink URL, if any.
   }

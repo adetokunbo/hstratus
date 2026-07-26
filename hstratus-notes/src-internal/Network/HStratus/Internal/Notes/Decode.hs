@@ -53,18 +53,28 @@ toNoteText ProtoNote{pnNoteText, pnAttributeRuns} =
 
 
 toNoteRun :: ProtoAttributeRun -> NoteRun
-toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnderlined, parStrikethrough, parLink} =
-  NoteRun
-    { nrLength = parLength
-    , nrStyle = parParagraphStyle >>= toNoteStyle
-    , -- FontWeight enum: 1=bold, 2=italic, 3=bold+italic
-      nrBold = parFontWeight == 1 || parFontWeight == 3
-    , nrItalic = parFontWeight == 2 || parFontWeight == 3
-    , nrUnderline = parUnderlined /= 0
-    , nrStrikethrough = parStrikethrough /= 0
-    , -- proto3-wire yields lazy Text; empty string means no link
-      nrLink = let t = LT.toStrict parLink in if T.null t then Nothing else Just t
-    }
+toNoteRun
+  ProtoAttributeRun
+    { parLength
+    , parParagraphStyle
+    , parFontWeight
+    , parUnderlined
+    , parStrikethrough
+    , parAttachmentId
+    , parLink
+    } =
+    NoteRun
+      { nrLength = parLength
+      , nrStyle = parParagraphStyle >>= toNoteStyle
+      , -- FontWeight enum: 1=bold, 2=italic, 3=bold+italic
+        nrBold = parFontWeight == 1 || parFontWeight == 3
+      , nrItalic = parFontWeight == 2 || parFontWeight == 3
+      , nrUnderline = parUnderlined /= 0
+      , nrStrikethrough = parStrikethrough /= 0
+      , nrAttachmentId = fmap LT.toStrict parAttachmentId
+      , -- proto3-wire yields lazy Text; empty string means no link
+        nrLink = let t = LT.toStrict parLink in if T.null t then Nothing else Just t
+      }
 
 
 -- StyleType enum from notes.proto.  Values not in this list represent future
@@ -74,16 +84,23 @@ toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnde
 -- block_quote set has style_type = 0 by proto3 default, so we give blockquote
 -- priority over title for that case.
 toNoteStyle :: ProtoParagraphStyle -> Maybe NoteStyle
-toNoteStyle ProtoParagraphStyle{ppsStyleType, ppsIndent, ppsChecked, ppsListStart, ppsBlockQuote} =
-  let indent = fromIntegral ppsIndent
-      listStart = fmap fromIntegral ppsListStart
-   in case ppsStyleType of
-        0 -> if ppsBlockQuote then Just (StyleBody True) else Just StyleTitle
-        1 -> Just StyleHeading
-        2 -> Just StyleSubheading
-        4 -> Just StyleMonospaced
-        100 -> Just (StyleBullet indent)
-        101 -> Just (StyleDash indent)
-        102 -> Just (StyleNumbered indent listStart)
-        103 -> Just (StyleChecklist indent (fromMaybe False ppsChecked))
-        _ -> if ppsBlockQuote then Just (StyleBody True) else Nothing
+toNoteStyle
+  ProtoParagraphStyle
+    { ppsStyleType
+    , ppsIndent
+    , ppsChecked
+    , ppsListStart
+    , ppsBlockQuote
+    } =
+    let indent = fromIntegral ppsIndent
+        listStart = fmap fromIntegral ppsListStart
+     in case ppsStyleType of
+          0 -> if ppsBlockQuote then Just (StyleBody True) else Just StyleTitle
+          1 -> Just StyleHeading
+          2 -> Just StyleSubheading
+          4 -> Just StyleMonospaced
+          100 -> Just (StyleBullet indent)
+          101 -> Just (StyleDash indent)
+          102 -> Just (StyleNumbered indent listStart)
+          103 -> Just (StyleChecklist indent (fromMaybe False ppsChecked))
+          _ -> if ppsBlockQuote then Just (StyleBody True) else Nothing

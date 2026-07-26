@@ -70,6 +70,13 @@ spec = describe "decodeNoteBody" $ do
         , ntRuns = [baseRun{nrStyle = Just (StyleBody True)}]
         }
 
+  it "propagates attachment_identifier to nrAttachmentId" $
+    decodeNoteBody attachmentIdFixtureBytes
+      `endsRight` NoteText
+        { ntText = "\xFFFC"
+        , ntRuns = [baseRun{nrAttachmentId = Just "att-1"}]
+        }
+
   prop "encode/decode roundtrip preserves NoteText" $ \nt ->
     ioProperty $ do
       result <- decodeNoteBody (encodeNoteText nt)
@@ -86,6 +93,7 @@ baseRun =
     , nrItalic = False
     , nrUnderline = False
     , nrStrikethrough = False
+    , nrAttachmentId = Nothing
     , nrLink = Nothing
     }
 
@@ -120,3 +128,7 @@ numberedListStart3FixtureBytes = mkNoteGzip "hi" [runWith 1 (psStyleType 102 <> 
 
 blockQuoteFixtureBytes :: ByteString
 blockQuoteFixtureBytes = mkNoteGzip "hi" [runWith 1 psBlockQuote]
+
+
+attachmentIdFixtureBytes :: ByteString
+attachmentIdFixtureBytes = mkNoteGzip "\xFFFC" [encodeNoteRun baseRun{nrAttachmentId = Just "att-1"}]

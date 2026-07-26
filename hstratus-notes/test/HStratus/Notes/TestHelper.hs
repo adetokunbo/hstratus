@@ -131,12 +131,13 @@ encodeNoteStyle style = encodeParagraphStyle $ case style of
 -- | Encode a 'NoteRun' as an AttributeRun sub-message.
 -- 'nrLink' is always 'Nothing' in generated runs (deferred).
 encodeNoteRun :: NoteRun -> Encode.MessageBuilder
-encodeNoteRun NoteRun{nrLength, nrStyle, nrBold, nrItalic, nrUnderline, nrStrikethrough, nrLink} =
+encodeNoteRun NoteRun{nrLength, nrStyle, nrBold, nrItalic, nrUnderline, nrStrikethrough, nrAttachmentId, nrLink} =
   Encode.int32 1 nrLength
     <> maybe mempty (Encode.embedded 2 . encodeNoteStyle) nrStyle
     <> (if fw /= 0 then Encode.int32 5 fw else mempty)
     <> (if nrUnderline then Encode.int32 6 1 else mempty)
     <> (if nrStrikethrough then Encode.int32 7 1 else mempty)
+    <> maybe mempty (\t -> Encode.embedded 12 (Encode.text 1 (TL.fromStrict t))) nrAttachmentId
     <> maybe mempty (Encode.text 9 . TL.fromStrict) nrLink
  where
   fw :: Int32

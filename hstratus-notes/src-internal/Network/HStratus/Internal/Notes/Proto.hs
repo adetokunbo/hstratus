@@ -26,6 +26,8 @@
 --           font_weight = 5 : int32    (FontWeight enum: 1=bold, 2=italic, 3=both)
 --           underlined = 6 : int32
 --           strikethrough = 7 : int32
+--           attachment_info = 12 : AttachmentInfo
+--             attachment_identifier = 1 : string
 --           link = 9 : string
 --
 -- Fields not listed here are silently ignored by the wire decoder.
@@ -72,6 +74,8 @@ data ProtoAttributeRun = ProtoAttributeRun
     parFontWeight :: Int32
   , parUnderlined :: Int32
   , parStrikethrough :: Int32
+  , -- Nothing when attachment_info absent or attachment_identifier empty
+    parAttachmentId :: Maybe LT.Text
   , -- empty string means no link
     parLink :: LT.Text
   }
@@ -137,10 +141,15 @@ parseProtoAttributeRun =
   ProtoAttributeRun
     <$> (one int32 0 `at` 1)
     <*> (embedded parseParagraphStyle `at` 2)
-    <*> (one int32 0 `at` 5) -- font_weight (field 3 and 4 are absent in schema)
+    <*> (one int32 0 `at` 5) -- font_weight (fields 3 and 4 are absent in schema)
     <*> (one int32 0 `at` 6) -- underlined
     <*> (one int32 0 `at` 7) -- strikethrough
-    <*> (one text LT.empty `at` 9) -- link (fields 8 skipped: superscript)
+    <*> fmap (>>= \t -> if LT.null t then Nothing else Just t) (embedded parseAttachmentInfo `at` 12)
+    <*> (one text LT.empty `at` 9) -- link (field 8 skipped: superscript)
+
+
+parseAttachmentInfo :: Parser RawMessage LT.Text
+parseAttachmentInfo = one text LT.empty `at` 1
 
 
 parseParagraphStyle :: Parser RawMessage ProtoParagraphStyle
