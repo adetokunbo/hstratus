@@ -114,6 +114,45 @@ spec = do
         NoteText{ntText = "first\nsecond", ntRuns = [baseRun{nrLength = 12}]}
         `shouldBe` "first\n\nsecond"
 
+  describe "noteToMarkdown monospaced" $ do
+    it "renders a single StyleMonospaced paragraph as a fenced code block" $
+      noteToMarkdown
+        NoteText{ntText = "code", ntRuns = [baseRun{nrLength = 4, nrStyle = Just StyleMonospaced}]}
+        `shouldBe` "```\ncode\n```"
+
+    it "merges consecutive StyleMonospaced paragraphs into one fence" $
+      noteToMarkdown
+        NoteText
+          { ntText = "line1\nline2"
+          , ntRuns =
+              [ baseRun{nrLength = 6, nrStyle = Just StyleMonospaced}
+              , baseRun{nrLength = 5, nrStyle = Just StyleMonospaced}
+              ]
+          }
+        `shouldBe` "```\nline1\nline2\n```"
+
+    it "closes the fence before a following body paragraph" $
+      noteToMarkdown
+        NoteText
+          { ntText = "code\nbody"
+          , ntRuns =
+              [ baseRun{nrLength = 5, nrStyle = Just StyleMonospaced}
+              , baseRun{nrLength = 4}
+              ]
+          }
+        `shouldBe` "```\ncode\n```\n\nbody"
+
+    it "opens the fence after a preceding body paragraph" $
+      noteToMarkdown
+        NoteText
+          { ntText = "body\ncode"
+          , ntRuns =
+              [ baseRun{nrLength = 5}
+              , baseRun{nrLength = 4, nrStyle = Just StyleMonospaced}
+              ]
+          }
+        `shouldBe` "body\n\n```\ncode\n```"
+
   describe "noteToMarkdown list styles" $ do
     it "renders StyleBullet 0 as top-level bullet" $
       noteToMarkdown

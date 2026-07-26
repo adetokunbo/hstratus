@@ -189,11 +189,20 @@ noteToMarkdown nt =
   go _ [] = []
   go st [p] =
     let (_, rendered) = renderParagraphWith st p
-     in [rendered]
+        suffix = if isMonoPara p then "\n```" else ""
+     in [rendered <> suffix]
   go st (p : rest@(next : _)) =
     let (st', rendered) = renderParagraphWith st p
-        sep = if isListPara p && isListPara next then "\n" else "\n\n"
+        sep
+          | isMonoPara p && isMonoPara next = "\n"
+          | isMonoPara p = "\n```\n\n"
+          | isListPara p && isListPara next = "\n"
+          | otherwise = "\n\n"
      in rendered : sep : go st' rest
+
+
+isMonoPara :: RawParagraph -> Bool
+isMonoPara RawParagraph{rpStyle} = rpStyle == Just StyleMonospaced
 
 
 isListPara :: RawParagraph -> Bool
@@ -227,6 +236,11 @@ resolvePrefix st style =
         Just (StyleNumbered i ms) ->
           let (n, counters') = nextCounter (rsCounters st) i ms (rsPrevStyle st)
            in (st'{rsCounters = counters'}, indentText i <> T.pack (show n) <> ". ")
+        Just StyleMonospaced ->
+          let prefix = case rsPrevStyle st of
+                Just StyleMonospaced -> ""
+                _ -> "```\n"
+           in (st', prefix)
         _ -> (st', staticPrefix style)
 
 
