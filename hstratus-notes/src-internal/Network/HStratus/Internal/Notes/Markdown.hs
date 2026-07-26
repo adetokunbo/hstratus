@@ -1,11 +1,12 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
--- Phase 1 of the markdown renderer: split a 'NoteText' into paragraphs.
--- Phase 2 (paragraph → markdown text) is added in a later step.
+-- Phase 1: split a 'NoteText' into paragraphs ('splitIntoParagraphs').
+-- Phase 2: render paragraphs as Markdown text ('noteToMarkdown').
 module Network.HStratus.Internal.Notes.Markdown
   ( RawParagraph (..)
   , RawSegment (..)
+  , noteToMarkdown
   , splitIntoParagraphs
   )
 where
@@ -15,13 +16,14 @@ import Data.Text (Text)
 import qualified Data.Text as T
 import Network.HStratus.Internal.Notes.Note
   ( NoteRun (..)
-  , NoteStyle
+  , NoteStyle (..)
   , NoteText (..)
   )
 
 
--- | A paragraph extracted from a 'NoteText', with its resolved style and
--- ordered inline segments.
+{- | A paragraph extracted from a 'NoteText', with its resolved style and
+ordered inline segments.
+-}
 data RawParagraph = RawParagraph
   { rpStyle :: Maybe NoteStyle
   -- ^ Style of the paragraph; 'Nothing' for plain body text.
@@ -148,3 +150,57 @@ replaceAttachment mId = T.replace "\xFFFC" placeholder
  where
   placeholder =
     maybe "[attachment]" (\i -> "[attachment: " <> i <> "]") mId
+
+
+{- | Render a 'NoteText' as Markdown.
+
+Paragraphs are separated by double newlines.  Empty paragraphs are dropped.
+Supported paragraph styles:
+
+* 'StyleTitle'       → @# …@
+* 'StyleHeading'     → @## …@
+* 'StyleSubheading'  → @### …@
+* 'StyleBody True'   → @> …@ (block-quote)
+
+All other styles (including list and monospaced styles) render as plain body
+text; dedicated rendering for those styles is deferred to future steps.
+
+Inline formatting: bold (@**@), italic (@_@), strikethrough (@~~@),
+link (@[text](url)@).  Underline has no Markdown equivalent and is dropped.
+-}
+noteToMarkdown :: NoteText -> Text
+noteToMarkdown nt =
+  T.intercalate "\n\n" (map renderParagraph (filter hasContent (splitIntoParagraphs nt)))
+
+
+hasContent :: RawParagraph -> Bool
+hasContent = any (not . T.null . rsText) . rpSegments
+
+
+renderParagraph :: RawParagraph -> Text
+renderParagraph RawParagraph{rpStyle, rpSegments} =
+  paragraphPrefix rpStyle <> T.concat (map renderSegment rpSegments)
+
+
+paragraphPrefix :: Maybe NoteStyle -> Text
+paragraphPrefix (Just StyleTitle) = "# "
+paragraphPrefix (Just StyleHeading) = "## "
+paragraphPrefix (Just StyleSubheading) = "### "
+paragraphPrefix (Just (StyleBody True)) = "> "
+paragraphPrefix _ = ""
+
+
+renderSegment :: RawSegment -> Text
+renderSegment RawSegment{rsText, rsBold, rsItalic, rsStrikethrough, rsLink} =
+  let inner = applyBoldItalic rsBold rsItalic rsText
+      withStrike = if rsStrikethrough then "~~" <> inner <> "~~" else inner
+   in case rsLink of
+        Nothing -> withStrike
+        Just url -> "[" <> withStrike <> "](" <> url <> ")"
+
+
+applyBoldItalic :: Bool -> Bool -> Text -> Text
+applyBoldItalic True True t = "**_" <> t <> "_**"
+applyBoldItalic True False t = "**" <> t <> "**"
+applyBoldItalic False True t = "_" <> t <> "_"
+applyBoldItalic False False t = t

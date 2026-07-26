@@ -64,6 +64,7 @@ library hstratus-notes-internal
 library
   exposed-modules:
     Network.HStratus.Notes
+    Network.HStratus.Notes.Markdown
     Network.HStratus.Notes.Note
   hs-source-dirs:   src
   build-depends:
