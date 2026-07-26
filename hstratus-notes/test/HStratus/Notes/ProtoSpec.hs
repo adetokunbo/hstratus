@@ -29,6 +29,16 @@ spec = describe "decodeNoteStoreProto" $ do
             parParagraphStyle run `shouldBe` Just (ProtoParagraphStyle 1)
           runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
 
+  it "decodes strikethrough field 7" $
+    case decodeNoteStoreProto noteWithStrikethroughBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] -> do
+            parLength run `shouldBe` 2
+            parStrikethrough run `shouldBe` 1
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
 
 -- NoteStoreProto { document: Document { note: Note { note_text: "hello" } } }
 --
@@ -58,3 +68,20 @@ minimalNoteBytes = "\x12\x09\x1a\x07\x12\x05hello"
 noteWithRunBytes :: ByteString
 noteWithRunBytes =
   "\x12\x0e\x1a\x0c\x12\x02hi\x2a\x06\x08\x02\x12\x02\x08\x01"
+
+
+-- NoteStoreProto { document: Document { note: Note {
+--   note_text: "hi",
+--   attribute_run: [ AttributeRun { length: 2, strikethrough: 1 } ]
+-- } } }
+--
+-- AttributeRun bytes:
+--   field 1 (length=2, wire 0): 0x08 0x02
+--   field 7 (strikethrough=1, wire 0): 0x38 0x01
+--   total: 4 bytes
+-- Note bytes: field 2 "hi" + field 5 (run, len 4): 10 bytes
+-- Document bytes (field 3, wire 2): 0x1a 0x0a <Note>             (12 bytes)
+-- Proto bytes   (field 2, wire 2): 0x12 0x0c <Document>          (14 bytes)
+noteWithStrikethroughBytes :: ByteString
+noteWithStrikethroughBytes =
+  "\x12\x0c\x1a\x0a\x12\x02hi\x2a\x04\x08\x02\x38\x01"

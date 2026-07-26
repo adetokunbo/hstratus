@@ -52,7 +52,7 @@ toNoteText ProtoNote{pnNoteText, pnAttributeRuns} =
 
 
 toNoteRun :: ProtoAttributeRun -> NoteRun
-toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnderlined, parLink} =
+toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnderlined, parStrikethrough, parLink} =
   NoteRun
     { nrLength = parLength
     , nrStyle = parParagraphStyle >>= toNoteStyle
@@ -60,6 +60,7 @@ toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnde
       nrBold = parFontWeight == 1 || parFontWeight == 3
     , nrItalic = parFontWeight == 2 || parFontWeight == 3
     , nrUnderline = parUnderlined /= 0
+    , nrStrikethrough = parStrikethrough /= 0
     , -- proto3-wire yields lazy Text; empty string means no link
       nrLink = let t = LT.toStrict parLink in if T.null t then Nothing else Just t
     }
