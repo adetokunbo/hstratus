@@ -1,6 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Drive.NodeData
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+JSON parsers for iCloud Drive API responses: node metadata, download URLs, and upload receipts.
+-}
 module Network.HStratus.Internal.Drive.NodeData
   ( parseNodeResponse
   , parseChildrenResponse
@@ -108,10 +116,15 @@ parseItems o = do
 -- | Checksum metadata returned after uploading file content (step 2 of upload).
 data UploadReceipt = UploadReceipt
   { urFileChecksum :: !Text
+  -- ^ SHA-256 checksum of the uploaded file
   , urWrappingKey :: !Text
+  -- ^ encryption wrapping key returned by the upload endpoint
   , urReferenceChecksum :: !Text
+  -- ^ reference checksum used in the commit body
   , urSize :: !Int64
+  -- ^ byte size of the uploaded content
   , urReceipt :: !(Maybe Text)
+  -- ^ opaque receipt token; @Nothing@ when absent from the server response
   }
 
 
