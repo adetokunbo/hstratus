@@ -50,8 +50,10 @@ rootNodeId = DriveNodeId "FOLDER::com.apple.CloudDocs::root"
 
 -- | A node in the iCloud Drive tree — either a folder or a file.
 data DriveNode
-  = DriveFolder FolderData
-  | DriveFile FileData
+  = -- | a folder node with its metadata
+    DriveFolder FolderData
+  | -- | a file node with its metadata
+    DriveFile FileData
   deriving (Eq, Show)
 
 
@@ -66,6 +68,7 @@ data FolderData = FolderData
   , fnZone :: !Text
   -- ^ CloudDocs zone (e.g. @com.apple.CloudDocs@)
   , fnDateCreated :: !(Maybe UTCTime)
+  -- ^ creation timestamp; @Nothing@ when absent from the server response
   }
   deriving (Eq, Show)
 
@@ -87,7 +90,9 @@ data FileData = FileData
   , fdSize :: !(Maybe Int64)
   -- ^ file size in bytes; @Nothing@ for zero-byte files
   , fdDateCreated :: !(Maybe UTCTime)
+  -- ^ creation timestamp; @Nothing@ when absent from the server response
   , fdDateModified :: !(Maybe UTCTime)
+  -- ^ last modification timestamp; @Nothing@ when absent from the server response
   }
   deriving (Eq, Show)
 
