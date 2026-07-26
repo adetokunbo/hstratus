@@ -46,33 +46,47 @@ import System.Exit (die)
 import System.FilePath (joinPath, takeDirectory, (</>))
 
 
+-- | Top-level Drive subcommand.
 data DriveCommand
-  = DriveLs !LsOpts
-  | DriveCp !CpOpts
+  = -- | list the contents of a Drive folder
+    DriveLs !LsOpts
+  | -- | download a file from Drive
+    DriveCp !CpOpts
   deriving (Eq, Show)
 
 
+-- | Options for the @drive ls@ subcommand.
 data LsOpts = LsOpts
   { lsPath :: ![Text]
+  -- ^ slash-separated path segments from the Drive root; empty means root
   , lsCommon :: !CommonOpts
+  -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
 
 
+-- | Destination specifier for the @drive cp@ subcommand.
 data CpDest
-  = CpDestRoot !FilePath
-  | CpDestOutput !FilePath
+  = -- | mirror the Drive path under the given local root directory
+    CpDestRoot !FilePath
+  | -- | write the file to the exact local path
+    CpDestOutput !FilePath
   deriving (Eq, Show)
 
 
+-- | Options for the @drive cp@ subcommand.
 data CpOpts = CpOpts
   { cpSrcPath :: !(NonEmpty Text)
+  -- ^ slash-separated path segments identifying the source file in Drive
   , cpDest :: !(Maybe CpDest)
+  -- ^ local destination; @Nothing@ defaults to @~/icloud-drive/\<path\>@
   , cpCommon :: !CommonOpts
+  -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
 
 
+-- | Optparse-applicative parser for the @drive@ subcommand.
 driveParser :: Parser DriveCommand
 driveParser =
   subparser
@@ -118,6 +132,7 @@ lsOptsParser =
     <*> commonOptsParser
 
 
+-- | Dispatch a 'DriveCommand' to its handler.
 runDrive :: DriveCommand -> IO ()
 runDrive (DriveLs opts) = runLs opts
 runDrive (DriveCp opts) = runCp opts
@@ -150,6 +165,7 @@ navigateToFile da nid (seg :| (s : rest)) = do
     Just (DriveFolder fd) -> navigateToFile da (fnId fd) (s :| rest)
 
 
+-- | Resolve the local destination path for a download, expanding @~@ via 'getHomeDirectory' when needed.
 resolveLocalDest :: CpOpts -> NonEmpty Text -> IO FilePath
 resolveLocalDest (CpOpts{cpDest = Just (CpDestOutput out)}) _ = pure out
 resolveLocalDest (CpOpts{cpDest = Just (CpDestRoot root)}) segs =

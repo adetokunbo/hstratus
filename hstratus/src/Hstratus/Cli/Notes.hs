@@ -28,27 +28,38 @@ import Options.Applicative
 import System.Exit (die, exitFailure)
 
 
+-- | Top-level Notes subcommand.
 data NotesCommand
-  = NotesListFolders CommonOpts
-  | NotesListNotes ListNotesOpts
-  | NotesGet GetOpts
+  = -- | list all Notes folders
+    NotesListFolders CommonOpts
+  | -- | list notes, optionally filtered by folder name
+    NotesListNotes ListNotesOpts
+  | -- | fetch and display the body of a note by ID
+    NotesGet GetOpts
   deriving (Eq, Show)
 
 
+-- | Options for the @notes list-notes@ subcommand.
 data ListNotesOpts = ListNotesOpts
   { lnFolder :: Maybe Text.Text
+  -- ^ optional folder name to filter by; @Nothing@ lists recent notes across all folders
   , lnCommon :: CommonOpts
+  -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
 
 
+-- | Options for the @notes get@ subcommand.
 data GetOpts = GetOpts
   { gnNoteId :: NoteId
+  -- ^ UUID record name of the note to fetch
   , gnCommon :: CommonOpts
+  -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
 
 
+-- | Optparse-applicative parser for the @notes@ subcommand.
 notesParser :: Parser NotesCommand
 notesParser =
   subparser
@@ -94,6 +105,7 @@ listNotesOptsParser =
     <*> commonOptsParser
 
 
+-- | Dispatch a 'NotesCommand' to its handler.
 runNotes :: NotesCommand -> IO ()
 runNotes (NotesListFolders opts) = runListFolders opts
 runNotes (NotesListNotes opts) = runListNotes opts
@@ -150,6 +162,7 @@ resolveFolderName na name = do
       exitFailure
 
 
+-- | Find the first folder whose name matches the given string (case-insensitive); returns its 'FolderId'.
 findFolderByName :: Text.Text -> [NoteFolder] -> Maybe FolderId
 findFolderByName name = fmap nfId . find matchesName
  where
