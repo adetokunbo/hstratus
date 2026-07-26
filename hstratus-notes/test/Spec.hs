@@ -3,6 +3,7 @@ module Main where
 import qualified HStratus.Notes.CloudKitSpec as CloudKit
 import qualified HStratus.Notes.DecodeSpec as Decode
 import qualified HStratus.Notes.EndpointsSpec as Endpoints
+import qualified HStratus.Notes.MarkdownSpec as Markdown
 import qualified HStratus.Notes.NoteDataSpec as NoteData
 import qualified HStratus.Notes.ProtoSpec as Proto
 import qualified HStratus.NotesSpec as Notes
@@ -23,6 +24,7 @@ main = do
     CloudKit.spec
     Decode.spec
     Endpoints.spec
+    Markdown.spec
     NoteData.spec
     Proto.spec
     Notes.spec

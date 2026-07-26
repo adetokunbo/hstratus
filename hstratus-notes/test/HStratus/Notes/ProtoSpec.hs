@@ -3,9 +3,13 @@
 module HStratus.Notes.ProtoSpec (spec) where
 
 import Data.ByteString (ByteString)
+import HStratus.Notes.Arbitraries ()
+import HStratus.Notes.TestHelper
 import Network.HStratus.Internal.Notes.Proto
 import Test.Hspec
 import Test.Hspec.Benri (endsLeft_, endsRight)
+import Test.Hspec.QuickCheck (prop)
+import Test.QuickCheck (counterexample, (===))
 
 
 spec :: Spec
@@ -26,35 +30,120 @@ spec = describe "decodeNoteStoreProto" $ do
         case pnAttributeRuns note of
           [run] -> do
             parLength run `shouldBe` 2
-            parParagraphStyle run `shouldBe` Just (ProtoParagraphStyle 1)
+            parParagraphStyle run
+              `shouldBe` Just
+                ProtoParagraphStyle
+                  { ppsStyleType = 1
+                  , ppsIndent = 0
+                  , ppsChecked = Nothing
+                  , ppsListStart = Nothing
+                  , ppsBlockQuote = False
+                  }
           runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
 
+  it "decodes strikethrough field 7" $
+    case decodeNoteStoreProto noteWithStrikethroughBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] -> do
+            parLength run `shouldBe` 2
+            parStrikethrough run `shouldBe` 1
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
 
--- NoteStoreProto { document: Document { note: Note { note_text: "hello" } } }
---
--- Note bytes    (field 2, wire 2): 0x12 0x05 "hello"              (7 bytes)
--- Document bytes(field 3, wire 2): 0x1a 0x07 <Note>               (9 bytes)
--- Proto bytes   (field 2, wire 2): 0x12 0x09 <Document>           (11 bytes)
+  it "decodes indent_amount field 4 into ppsIndent" $
+    case decodeNoteStoreProto bulletIndent1Bytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsIndent (parParagraphStyle run) `shouldBe` Just 1
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  it "decodes checklist.done = 1 into ppsChecked = Just True" $
+    case decodeNoteStoreProto checklistDoneBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsChecked (parParagraphStyle run) `shouldBe` Just (Just True)
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  it "decodes checklist.done = 0 into ppsChecked = Just False" $
+    case decodeNoteStoreProto checklistUndoneBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsChecked (parParagraphStyle run) `shouldBe` Just (Just False)
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  it "decodes absent checklist into ppsChecked = Nothing" $
+    case decodeNoteStoreProto checklistAbsentBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsChecked (parParagraphStyle run) `shouldBe` Just Nothing
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  it "decodes starting_list_item_number into ppsListStart = Just 3" $
+    case decodeNoteStoreProto numberedListStart3Bytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsListStart (parParagraphStyle run) `shouldBe` Just (Just 3)
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  it "decodes block_quote into ppsBlockQuote = True" $
+    case decodeNoteStoreProto blockQuoteBytes of
+      Left err -> expectationFailure err
+      Right note ->
+        case pnAttributeRuns note of
+          [run] ->
+            fmap ppsBlockQuote (parParagraphStyle run) `shouldBe` Just True
+          runs -> expectationFailure $ "expected 1 run, got " <> show (length runs)
+
+  prop "encode/decode roundtrip preserves ProtoParagraphStyle" $ \ps ->
+    case decodeNoteStoreProto (mkNote "x" [runWith 1 (encodeParagraphStyle ps)]) of
+      Left err -> counterexample err False
+      Right note -> case pnAttributeRuns note of
+        [run] -> parParagraphStyle run === Just ps
+        runs -> counterexample ("expected 1 run, got " <> show (length runs)) False
+
+
 minimalNoteBytes :: ByteString
-minimalNoteBytes = "\x12\x09\x1a\x07\x12\x05hello"
+minimalNoteBytes = mkNote "hello" []
 
 
--- NoteStoreProto { document: Document { note: Note {
---   note_text: "hi",
---   attribute_run: [ AttributeRun { length: 2, paragraph_style: ParagraphStyle { style_type: 1 } } ]
--- } } }
---
--- ParagraphStyle bytes (field 1, wire 0): 0x08 0x01              (2 bytes)
--- AttributeRun bytes:
---   field 1 (length=2, wire 0): 0x08 0x02
---   field 2 (paragraph_style, wire 2): 0x12 0x02 <ParagraphStyle>
---   total: 6 bytes
--- Note bytes (field 2: "hi", field 5: AttributeRun):
---   field 2 (text "hi", wire 2): 0x12 0x02 "hi"
---   field 5 (run, wire 2): 0x2a 0x06 <AttributeRun>
---   total: 12 bytes
--- Document bytes (field 3, wire 2): 0x1a 0x0c <Note>             (14 bytes)
--- Proto bytes   (field 2, wire 2): 0x12 0x0e <Document>          (16 bytes)
 noteWithRunBytes :: ByteString
-noteWithRunBytes =
-  "\x12\x0e\x1a\x0c\x12\x02hi\x2a\x06\x08\x02\x12\x02\x08\x01"
+noteWithRunBytes = mkNote "hi" [runWith 2 (psStyleType 1)]
+
+
+noteWithStrikethroughBytes :: ByteString
+noteWithStrikethroughBytes = mkNote "hi" [runFields 2 [(7, 1)]]
+
+
+bulletIndent1Bytes :: ByteString
+bulletIndent1Bytes = mkNote "hi" [runWith 1 (psStyleType 100 <> psIndentAmount 1)]
+
+
+checklistDoneBytes :: ByteString
+checklistDoneBytes = mkNote "hi" [runWith 1 (psStyleType 103 <> psChecklist True)]
+
+
+checklistUndoneBytes :: ByteString
+checklistUndoneBytes = mkNote "hi" [runWith 1 (psStyleType 103 <> psChecklist False)]
+
+
+checklistAbsentBytes :: ByteString
+checklistAbsentBytes = mkNote "hi" [runWith 1 (psStyleType 103)]
+
+
+numberedListStart3Bytes :: ByteString
+numberedListStart3Bytes = mkNote "hi" [runWith 1 (psStyleType 102 <> psListStart 3)]
+
+
+blockQuoteBytes :: ByteString
+blockQuoteBytes = mkNote "hi" [runWith 1 psBlockQuote]

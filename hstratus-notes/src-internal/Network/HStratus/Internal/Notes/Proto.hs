@@ -18,9 +18,16 @@
 --           length = 1 : int32
 --           paragraph_style = 2 : ParagraphStyle
 --             style_type = 1 : int32   (StyleType enum)
+--             indent_amount = 4 : int32
+--             checklist = 5 : Checklist
+--               done = 2 : int32
+--             starting_list_item_number = 7 : int32
+--             block_quote = 8 : int32
 --           font_weight = 5 : int32    (FontWeight enum: 1=bold, 2=italic, 3=both)
 --           underlined = 6 : int32
 --           strikethrough = 7 : int32
+--           attachment_info = 12 : AttachmentInfo
+--             attachment_identifier = 1 : string
 --           link = 9 : string
 --
 -- Fields not listed here are silently ignored by the wire decoder.
@@ -67,6 +74,8 @@ data ProtoAttributeRun = ProtoAttributeRun
     parFontWeight :: Int32
   , parUnderlined :: Int32
   , parStrikethrough :: Int32
+  , -- Nothing when attachment_info absent or attachment_identifier empty
+    parAttachmentId :: Maybe LT.Text
   , -- empty string means no link
     parLink :: LT.Text
   }
@@ -75,8 +84,16 @@ data ProtoAttributeRun = ProtoAttributeRun
 
 -- style_type values: 0=title, 1=heading, 2=subheading, 4=monospaced,
 -- 100=bullet, 101=dash, 102=numbered, 103=checklist
-newtype ProtoParagraphStyle = ProtoParagraphStyle
+data ProtoParagraphStyle = ProtoParagraphStyle
   { ppsStyleType :: Int32
+  , ppsIndent :: Int32
+  -- ^ indent_amount field 4; 0 when absent.
+  , ppsChecked :: Maybe Bool
+  -- ^ checklist.done field 5 sub-field 2; 'Nothing' when checklist sub-message absent.
+  , ppsListStart :: Maybe Int32
+  -- ^ starting_list_item_number field 7; 'Nothing' when absent or zero.
+  , ppsBlockQuote :: Bool
+  -- ^ block_quote field 8 non-zero.
   }
   deriving (Eq, Show)
 
@@ -124,13 +141,26 @@ parseProtoAttributeRun =
   ProtoAttributeRun
     <$> (one int32 0 `at` 1)
     <*> (embedded parseParagraphStyle `at` 2)
-    <*> (one int32 0 `at` 5) -- font_weight (field 3 and 4 are absent in schema)
+    <*> (one int32 0 `at` 5) -- font_weight (fields 3 and 4 are absent in schema)
     <*> (one int32 0 `at` 6) -- underlined
     <*> (one int32 0 `at` 7) -- strikethrough
-    <*> (one text LT.empty `at` 9) -- link (fields 8 skipped: superscript)
+    <*> fmap (>>= \t -> if LT.null t then Nothing else Just t) (embedded parseAttachmentInfo `at` 12)
+    <*> (one text LT.empty `at` 9) -- link (field 8 skipped: superscript)
 
 
--- style_type is at field 1; remaining ParagraphStyle fields (alignment,
--- indent, checklist, etc.) are not needed by the domain layer and are ignored.
+parseAttachmentInfo :: Parser RawMessage LT.Text
+parseAttachmentInfo = one text LT.empty `at` 1
+
+
 parseParagraphStyle :: Parser RawMessage ProtoParagraphStyle
-parseParagraphStyle = ProtoParagraphStyle <$> (one int32 0 `at` 1)
+parseParagraphStyle =
+  ProtoParagraphStyle
+    <$> (one int32 0 `at` 1)
+    <*> (one int32 0 `at` 4)
+    <*> (embedded parseChecklist `at` 5)
+    <*> (fmap (\n -> if n == 0 then Nothing else Just n) (one int32 0) `at` 7)
+    <*> (fmap (/= 0) (one int32 0) `at` 8)
+
+
+parseChecklist :: Parser RawMessage Bool
+parseChecklist = fmap (/= 0) (one int32 0 `at` 2)

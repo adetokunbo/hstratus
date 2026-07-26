@@ -98,6 +98,10 @@ data NoteRun = NoteRun
   -- ^ 'True' when the run is italic.
   , nrUnderline :: Bool
   -- ^ 'True' when the run is underlined.
+  , nrStrikethrough :: Bool
+  -- ^ 'True' when the run is struck through.
+  , nrAttachmentId :: Maybe Text
+  -- ^ CloudKit attachment identifier, present when the run covers a @\xFFFC@ placeholder.
   , nrLink :: Maybe Text
   -- ^ Hyperlink URL, if any.
   }
@@ -110,8 +114,16 @@ data NoteStyle
   | StyleHeading
   | StyleSubheading
   | StyleMonospaced
-  | StyleBullet
-  | StyleDash
-  | StyleNumbered
-  | StyleChecklist
+  | -- | Plain body paragraph. 'True' when the paragraph is a blockquote.
+    StyleBody Bool
+  | -- | Bullet list item. Argument is the indent level (0 = top).
+    StyleBullet Int
+  | -- | Dash list item. Argument is the indent level (0 = top).
+    StyleDash Int
+  | {- | Numbered list item. Arguments are indent level and optional
+    list-start override (@'Nothing'@ means continue from current counter).
+    -}
+    StyleNumbered Int (Maybe Int)
+  | -- | Checklist item. Arguments are indent level and checked state.
+    StyleChecklist Int Bool
   deriving (Eq, Ord, Show)

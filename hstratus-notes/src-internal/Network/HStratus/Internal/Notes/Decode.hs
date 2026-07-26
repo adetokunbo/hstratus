@@ -12,6 +12,7 @@ import qualified Codec.Compression.GZip as GZip
 import Control.Exception (SomeException, evaluate, try)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as LT
 import Network.HStratus.Internal.Notes.Note
@@ -52,30 +53,54 @@ toNoteText ProtoNote{pnNoteText, pnAttributeRuns} =
 
 
 toNoteRun :: ProtoAttributeRun -> NoteRun
-toNoteRun ProtoAttributeRun{parLength, parParagraphStyle, parFontWeight, parUnderlined, parLink} =
-  NoteRun
-    { nrLength = parLength
-    , nrStyle = parParagraphStyle >>= toNoteStyle
-    , -- FontWeight enum: 1=bold, 2=italic, 3=bold+italic
-      nrBold = parFontWeight == 1 || parFontWeight == 3
-    , nrItalic = parFontWeight == 2 || parFontWeight == 3
-    , nrUnderline = parUnderlined /= 0
-    , -- proto3-wire yields lazy Text; empty string means no link
-      nrLink = let t = LT.toStrict parLink in if T.null t then Nothing else Just t
-    }
+toNoteRun
+  ProtoAttributeRun
+    { parLength
+    , parParagraphStyle
+    , parFontWeight
+    , parUnderlined
+    , parStrikethrough
+    , parAttachmentId
+    , parLink
+    } =
+    NoteRun
+      { nrLength = parLength
+      , nrStyle = parParagraphStyle >>= toNoteStyle
+      , -- FontWeight enum: 1=bold, 2=italic, 3=bold+italic
+        nrBold = parFontWeight == 1 || parFontWeight == 3
+      , nrItalic = parFontWeight == 2 || parFontWeight == 3
+      , nrUnderline = parUnderlined /= 0
+      , nrStrikethrough = parStrikethrough /= 0
+      , nrAttachmentId = fmap LT.toStrict parAttachmentId
+      , -- proto3-wire yields lazy Text; empty string means no link
+        nrLink = let t = LT.toStrict parLink in if T.null t then Nothing else Just t
+      }
 
 
--- StyleType enum from notes.proto.  Values not in this list represent
--- future or unknown styles and are mapped to Nothing so the domain layer
--- can render them as unstyled rather than failing.
+-- StyleType enum from notes.proto.  Values not in this list represent future
+-- or unknown styles; if block_quote is set they map to StyleBody True,
+-- otherwise to Nothing (rendered as plain body text).
+-- style_type 0 (title) defers to block_quote: a paragraph_style with only
+-- block_quote set has style_type = 0 by proto3 default, so we give blockquote
+-- priority over title for that case.
 toNoteStyle :: ProtoParagraphStyle -> Maybe NoteStyle
-toNoteStyle (ProtoParagraphStyle n) = case n of
-  0 -> Just StyleTitle
-  1 -> Just StyleHeading
-  2 -> Just StyleSubheading
-  4 -> Just StyleMonospaced
-  100 -> Just StyleBullet
-  101 -> Just StyleDash
-  102 -> Just StyleNumbered
-  103 -> Just StyleChecklist
-  _ -> Nothing
+toNoteStyle
+  ProtoParagraphStyle
+    { ppsStyleType
+    , ppsIndent
+    , ppsChecked
+    , ppsListStart
+    , ppsBlockQuote
+    } =
+    let indent = fromIntegral ppsIndent
+        listStart = fmap fromIntegral ppsListStart
+     in case ppsStyleType of
+          0 -> if ppsBlockQuote then Just (StyleBody True) else Just StyleTitle
+          1 -> Just StyleHeading
+          2 -> Just StyleSubheading
+          4 -> Just StyleMonospaced
+          100 -> Just (StyleBullet indent)
+          101 -> Just (StyleDash indent)
+          102 -> Just (StyleNumbered indent listStart)
+          103 -> Just (StyleChecklist indent (fromMaybe False ppsChecked))
+          _ -> if ppsBlockQuote then Just (StyleBody True) else Nothing
