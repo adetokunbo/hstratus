@@ -335,10 +335,15 @@ loginMsgBase = (<> ".last-logon.json") . sprucedName
 -- | Data obtained from HTTP response headers that define a user session
 data SavedHeaders = SavedHeaders
   { shCountry :: !(Maybe Text)
+  -- ^ X-Apple-ID-Country value from the last response
   , shSessionId :: !(Maybe Text)
+  -- ^ X-Apple-ID-Session-Id value from the last response
   , shSessionToken :: !(Maybe Text)
+  -- ^ X-Apple-Session-Token value from the last response
   , shTrustToken :: !(Maybe Text)
+  -- ^ X-Apple-TwoSV-Trust-Token value from the last response
   , shCounter :: !(Maybe Text)
+  -- ^ X-Apple-HC-Bits value from the last response; used to derive hashcash proofs
   }
   deriving (Eq, Show, Generic)
 
