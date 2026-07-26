@@ -45,11 +45,17 @@ data RawParagraph = RawParagraph
 -- | One inline span within a 'RawParagraph'.
 data RawSegment = RawSegment
   { rsText :: Text
+  -- ^ plain text content of the span
   , rsBold :: Bool
+  -- ^ @True@ when the span should be rendered bold
   , rsItalic :: Bool
+  -- ^ @True@ when the span should be rendered italic
   , rsStrikethrough :: Bool
+  -- ^ @True@ when the span should be rendered with strikethrough
   , rsUnderline :: Bool
+  -- ^ @True@ when the span is underlined (no Markdown equivalent; dropped during rendering)
   , rsLink :: Maybe Text
+  -- ^ hyperlink URL; @Nothing@ when the span is not a link
   }
   deriving (Eq, Show)
 
