@@ -12,6 +12,7 @@ module Hstratus.Cli.Notes
   ( NotesCommand (..)
   , ListNotesOpts (..)
   , GetOpts (..)
+  , GetFormat (..)
   , notesParser
   , runNotes
   , findFolderByName
@@ -24,6 +25,7 @@ import Data.Maybe (catMaybes)
 import qualified Data.Text as Text
 import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser, onServiceError, runWithApi)
 import Network.HStratus.Notes
+import Network.HStratus.Notes.Markdown (noteToMarkdown)
 import Options.Applicative
 import System.Exit (die, exitFailure)
 
@@ -49,10 +51,21 @@ data ListNotesOpts = ListNotesOpts
   deriving (Eq, Show)
 
 
+-- | Output format for the @notes get@ subcommand.
+data GetFormat
+  = -- | render the note body as Markdown (default)
+    GetMarkdown
+  | -- | emit the raw plain-text content of the note
+    GetText
+  deriving (Eq, Show)
+
+
 -- | Options for the @notes get@ subcommand.
 data GetOpts = GetOpts
   { gnNoteId :: NoteId
   -- ^ UUID record name of the note to fetch
+  , gnFormat :: GetFormat
+  -- ^ output format; defaults to 'GetMarkdown'
   , gnCommon :: CommonOpts
   -- ^ shared connection and logging options
   }
@@ -79,7 +92,7 @@ notesParser =
           "get"
           ( info
               (NotesGet <$> getOptsParser <**> helper)
-              (progDesc "Fetch and display the plain-text body of a note")
+              (progDesc "Fetch and display a note body (default format: markdown)")
           )
     )
 
@@ -88,6 +101,18 @@ getOptsParser :: Parser GetOpts
 getOptsParser =
   GetOpts
     <$> (NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "UUID record name (e.g. 68567409-5528-458C-9A00-7A2AB485CAD6), as shown by list-notes"))
+    <*> option
+      ( eitherReader $ \s -> case s of
+          "markdown" -> Right GetMarkdown
+          "text" -> Right GetText
+          _ -> Left ("unknown format: " <> s <> "; use markdown or text")
+      )
+      ( long "format"
+          <> metavar "FORMAT"
+          <> value GetMarkdown
+          <> showDefault
+          <> help "Output format: markdown (default) or text"
+      )
     <*> commonOptsParser
 
 
@@ -149,7 +174,10 @@ runGet opts =
         , fmap (\t -> "Modified: " <> show t) (nsModified s)
         , Just ""
         ]
-    putStrLn (Text.unpack (ntText nt))
+    let body = case gnFormat opts of
+          GetMarkdown -> noteToMarkdown nt
+          GetText -> ntText nt
+    putStrLn (Text.unpack body)
 
 
 resolveFolderName :: NotesApi -> Text.Text -> IO FolderId
