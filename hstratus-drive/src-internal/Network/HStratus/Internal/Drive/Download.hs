@@ -2,6 +2,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_HADDOCK prune #-}
 
+{- |
+Module      : Network.HStratus.Internal.Drive.Download
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+API-call functions for reading and writing iCloud Drive nodes.
+-}
 module Network.HStratus.Internal.Drive.Download
   ( DriveError (..)
   , fetchNode
@@ -67,10 +75,14 @@ import Network.HTTP.Client.MultipartFormData (formDataBody, partContentType, par
 import Network.HTTP.Types (hContentType, statusCode)
 
 
+-- | Errors that can occur during iCloud Drive API calls.
 data DriveError
-  = DriveHttpError Int
-  | DriveParseError String
-  | DriveInvalidRoot
+  = -- | the server returned an unexpected HTTP status code
+    DriveHttpError Int
+  | -- | a JSON response could not be decoded into the expected structure
+    DriveParseError String
+  | -- | the drive root node could not be resolved
+    DriveInvalidRoot
 
 
 instance Show DriveError where
