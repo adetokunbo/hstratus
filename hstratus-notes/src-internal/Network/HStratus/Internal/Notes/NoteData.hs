@@ -47,6 +47,7 @@ import Network.HStratus.Internal.Notes.Note
   )
 
 
+-- | Convert a CloudKit record to a 'NoteSummary'; returns @Nothing@ if the record type is not @Note@ or @PasswordProtectedNote@.
 noteRecordToSummary :: CKRecord -> Maybe NoteSummary
 noteRecordToSummary rec = do
   rt <- crType rec
@@ -63,6 +64,7 @@ noteRecordToSummary rec = do
       }
 
 
+-- | Convert a CloudKit record to a 'NoteFolder'; returns @Nothing@ if the record type is not @Folder@.
 noteRecordToFolder :: CKRecord -> Maybe NoteFolder
 noteRecordToFolder rec = do
   rt <- crType rec
@@ -74,6 +76,7 @@ noteRecordToFolder rec = do
       }
 
 
+-- | Convert a CloudKit record to a 'Note' with decoded body bytes; returns @Nothing@ if the record is not a note or the body is absent.
 noteRecordToNote :: CKRecord -> Maybe Note
 noteRecordToNote rec = do
   summary <- noteRecordToSummary rec
@@ -82,18 +85,22 @@ noteRecordToNote rec = do
   pure Note{noteInfo = summary, noteBodyBytes = bodyBytes}
 
 
+-- | Extract all note summaries from a CloudKit query response.
 parseSummariesFromQuery :: CKQueryResponse -> [NoteSummary]
 parseSummariesFromQuery = mapMaybe noteRecordToSummary . qrRecords
 
 
+-- | Extract all note folders from a CloudKit query response.
 parseFoldersFromQuery :: CKQueryResponse -> [NoteFolder]
 parseFoldersFromQuery = mapMaybe noteRecordToFolder . qrRecords
 
 
+-- | Extract all note summaries from a CloudKit zone-changes response.
 parseSummariesFromChanges :: CKZoneChangesResponse -> [NoteSummary]
 parseSummariesFromChanges = mapMaybe noteRecordToSummary . allZoneRecords
 
 
+-- | Extract all note folders from a CloudKit zone-changes response.
 parseFoldersFromChanges :: CKZoneChangesResponse -> [NoteFolder]
 parseFoldersFromChanges = mapMaybe noteRecordToFolder . allZoneRecords
 
