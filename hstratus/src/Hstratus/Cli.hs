@@ -20,9 +20,9 @@ import Options.Applicative
 
 
 data TopCommand
-  = AuthCmd AuthCommand
-  | DriveCmd DriveCommand
-  | NotesCmd NotesCommand
+  = AuthCmd !AuthCommand
+  | DriveCmd !DriveCommand
+  | NotesCmd !NotesCommand
   deriving (Eq, Show)
 
 

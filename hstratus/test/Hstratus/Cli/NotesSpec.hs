@@ -2,9 +2,14 @@
 
 module Hstratus.Cli.NotesSpec (spec) where
 
-import Data.Either (isLeft)
 import Hstratus.Cli (TopCommand (..), cliParser)
-import Hstratus.Cli.Notes (GetOpts (..), ListNotesOpts (..), NotesCommand (..), findFolderByName)
+import Hstratus.Cli.Notes
+  ( GetFormat (..)
+  , GetOpts (..)
+  , ListNotesOpts (..)
+  , NotesCommand (..)
+  , findFolderByName
+  )
 import Network.HStratus.Http.Cli (CommonOpts (..))
 import Network.HStratus.Notes.Note (FolderId (..), NoteFolder (..), NoteId (..))
 import Options.Applicative
@@ -14,7 +19,7 @@ import Options.Applicative
   , renderFailure
   )
 import Test.Hspec
-import Test.Hspec.Benri (endsRight)
+import Test.Hspec.Benri (endsLeft_, endsRight)
 
 
 parseCmd :: [String] -> IO (Either String TopCommand)
@@ -40,17 +45,27 @@ spec = do
       parseCmd ["notes", "list-notes", "--folder", "TukTuk"]
         `endsRight` NotesCmd (NotesListNotes (ListNotesOpts (Just "TukTuk") defaultOpts))
 
-    it "parses notes get NOTE_ID" $
+    it "parses notes get NOTE_ID (default format is markdown)" $
       parseCmd ["notes", "get", "Note/ABCD-1234"]
-        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") defaultOpts))
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") GetMarkdown defaultOpts))
+
+    it "parses notes get NOTE_ID --format markdown" $
+      parseCmd ["notes", "get", "Note/ABCD-1234", "--format", "markdown"]
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") GetMarkdown defaultOpts))
+
+    it "parses notes get NOTE_ID --format text" $
+      parseCmd ["notes", "get", "Note/ABCD-1234", "--format", "text"]
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") GetText defaultOpts))
 
     it "parses notes get NOTE_ID with --china" $
       parseCmd ["notes", "get", "Note/ABCD-1234", "--china"]
-        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") defaultOpts{optChina = True}))
+        `endsRight` NotesCmd (NotesGet (GetOpts (NoteId "Note/ABCD-1234") GetMarkdown defaultOpts{optChina = True}))
 
     it "rejects notes get with no argument" $ do
-      result <- parseCmd ["notes", "get"]
-      result `shouldSatisfy` isLeft
+      endsLeft_ $ parseCmd ["notes", "get"]
+
+    it "rejects notes get with unknown --format value" $ do
+      endsLeft_ $ parseCmd ["notes", "get", "Note/ABCD-1234", "--format", "html"]
 
   describe "findFolderByName" $ do
     it "returns Just FolderId on an exact-case match" $
