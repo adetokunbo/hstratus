@@ -51,7 +51,7 @@ import Network.HStratus.Internal.Notes.Note
 noteRecordToSummary :: CKRecord -> Maybe NoteSummary
 noteRecordToSummary rec = do
   rt <- crType rec
-  guard (rt == "Note" || rt == "PasswordProtectedNote")
+  guard (rt == "Note" || rt == "PasswordProtectedNote" || rt == "SearchIndexes")
   pure
     NoteSummary
       { nsId = NoteId (crName rec)
@@ -114,25 +114,25 @@ allZoneRecords = concatMap zczRecords . zcrZones
 fieldInt64 :: Text -> CKRecord -> Maybe Int64
 fieldInt64 key rec = case Map.lookup key (crFields rec) of
   Just (CKInt64Field i) -> Just i
-  _ -> Nothing
+  _otherwise -> Nothing
 
 
 fieldTimestamp :: Text -> CKRecord -> Maybe UTCTime
 fieldTimestamp key rec = case Map.lookup key (crFields rec) of
   Just (CKTimestampField ms) -> Just (parseMillisTimestamp ms)
-  _ -> Nothing
+  _otherwise -> Nothing
 
 
 fieldFolderId :: Text -> CKRecord -> Maybe FolderId
 fieldFolderId key rec = case Map.lookup key (crFields rec) of
   Just (CKReferenceField ref) -> Just (FolderId (rrRecordName ref))
-  _ -> Nothing
+  _otherwise -> Nothing
 
 
 fieldEncryptedBytes :: Text -> CKRecord -> Maybe Text
 fieldEncryptedBytes key rec = case Map.lookup key (crFields rec) of
   Just (CKEncryptedBytesField t) -> Just t
-  _ -> Nothing
+  _otherwise -> Nothing
 
 
 -- Decode a base64-encoded ENCRYPTED_BYTES field to UTF-8 text.

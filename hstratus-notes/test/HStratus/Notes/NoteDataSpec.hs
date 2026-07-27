@@ -52,6 +52,22 @@ spec = describe "Network.HStratus.Internal.Notes.NoteData" $ do
                 , nsDeleted = False
                 , nsLocked = False
                 }
+    it "parses a SearchIndexes record into a NoteSummary with nsLocked = False" $ do
+      r <- decodeOrFail querySearchIndexJson :: IO CKQueryResponse
+      case qrRecords r of
+        [] -> expectationFailure "expected records"
+        rec : _ ->
+          noteRecordToSummary rec
+            `shouldBe` Just
+              NoteSummary
+                { nsId = NoteId "Note/NOTE-FIXTURE"
+                , nsTitle = Just "Synthetic note"
+                , nsSnippet = Just "Synthetic snippet"
+                , nsModified = Just (posixSecondsToUTCTime 1735776000)
+                , nsFolderId = Just (FolderId "Folder/FOLDER-FIXTURE")
+                , nsDeleted = False
+                , nsLocked = False
+                }
     it "returns Nothing for a tombstone" $ do
       r <- decodeOrFail zoneChangesJson :: IO CKZoneChangesResponse
       case concatMap zczRecords (zcrZones r) of
@@ -99,6 +115,9 @@ spec = describe "Network.HStratus.Internal.Notes.NoteData" $ do
     it "returns one summary from a note query response" $ do
       r <- decodeOrFail queryNotesJson :: IO CKQueryResponse
       length (parseSummariesFromQuery r) `shouldBe` 1
+    it "returns one summary from a SearchIndexes query response" $ do
+      r <- decodeOrFail querySearchIndexJson :: IO CKQueryResponse
+      length (parseSummariesFromQuery r) `shouldBe` 1
     it "returns empty from a folders-only response" $ do
       r <- decodeOrFail queryFoldersJson :: IO CKQueryResponse
       parseSummariesFromQuery r `shouldBe` []
@@ -138,6 +157,19 @@ queryFoldersJson =
   \,\"zoneID\":{\"zoneName\":\"Notes\",\"zoneType\":\"REGULAR_CUSTOM_ZONE\"}\
   \,\"fields\":{\"TitleEncrypted\":{\"type\":\"ENCRYPTED_BYTES\",\"value\":\"U3ludGhldGljIEZvbGRlcg==\"}\
   \,\"HasSubfolder\":{\"type\":\"INT64\",\"value\":1}}}]\
+  \,\"continuationMarker\":null}"
+
+
+querySearchIndexJson :: LBS.ByteString
+querySearchIndexJson =
+  "{\"records\":[{\"recordName\":\"Note/NOTE-FIXTURE\"\
+  \,\"recordType\":\"SearchIndexes\"\
+  \,\"fields\":{\
+  \\"TitleEncrypted\":{\"type\":\"ENCRYPTED_BYTES\",\"value\":\"U3ludGhldGljIG5vdGU=\"}\
+  \,\"SnippetEncrypted\":{\"type\":\"ENCRYPTED_BYTES\",\"value\":\"U3ludGhldGljIHNuaXBwZXQ=\"}\
+  \,\"ModificationDate\":{\"type\":\"TIMESTAMP\",\"value\":1735776000000}\
+  \,\"Deleted\":{\"type\":\"INT64\",\"value\":0}\
+  \,\"Folder\":{\"type\":\"REFERENCE\",\"value\":{\"recordName\":\"Folder/FOLDER-FIXTURE\",\"action\":\"VALIDATE\"}}}}]\
   \,\"continuationMarker\":null}"
 
 

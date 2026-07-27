@@ -71,9 +71,9 @@ spec = describe "Network.HStratus.Internal.Notes.Endpoints" $ do
         `shouldSatisfy` lbsContains "\"continuationMarker\""
 
   describe "recentsBody" $ do
-    it "queries Note records" $
+    it "queries SearchIndexes records" $
       recentsBody 10 Nothing
-        `shouldSatisfy` lbsContains "\"recordType\":\"Note\""
+        `shouldSatisfy` lbsContains "\"recordType\":\"SearchIndexes\""
     it "includes Notes zoneID with zoneType" $
       recentsBody 10 Nothing
         `shouldSatisfy` lbsContains "\"zoneType\":\"REGULAR_CUSTOM_ZONE\""
