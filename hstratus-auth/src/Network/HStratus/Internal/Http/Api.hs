@@ -111,7 +111,9 @@ import Network.HTTP.Types
   , hAccept
   , hContentType
   )
+import System.Directory (doesFileExist)
 import System.IO (Handle, hPutStrLn)
+import System.Posix.Files (setFileMode)
 import Web.Cookie.Jar (usingCookiesFromFile)
 
 
@@ -311,6 +313,8 @@ rawRequest' mayRetry api req = do
   let Api{apiManager = mgr, apiSession = s, apiLogger = mbLogger} = api
       jarPath = cookiePath (sessionTopDir s) (sessionCreds s)
   resp <- usingCookiesFromFile jarPath req $ flip httpLbs mgr
+  jarExists <- doesFileExist jarPath
+  when jarExists $ setFileMode jarPath 0o600
   updateSessionSavedHeaders s $ updateSavedHeaders $ responseHeaders resp
   mapM_ (\(ApiLogger logFn) -> logFn req resp) mbLogger
   if mayRetry && needsRetry (statusCode (responseStatus resp))

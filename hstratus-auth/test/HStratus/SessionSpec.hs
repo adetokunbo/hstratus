@@ -13,6 +13,8 @@ module HStratus.SessionSpec (spec) where
 import Control.Monad (when)
 import Data.Aeson (decode, eitherDecodeFileStrict, encode, encodeFile, object, (.=))
 import Data.Aeson.Types (parseJSON, parseMaybe)
+import Data.Bits ((.&.))
+import Data.Either (isLeft)
 import Data.List (isInfixOf, sort)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -23,15 +25,18 @@ import Data.Word (Word16)
 import HStratus.TrustSpec (jsonKeysOf)
 import Network.HStratus.Internal.Session
   ( SavedHeaders (..)
+  , accountDataPath
   , accountDataRequires2FA
   , accountDataRequires2SA
   , appBase
+  , checkSecureMode
   , clientIdPath
   , cookiePath
   , credentialsPath
   , encodeFileAtomic
   , loadAccountData
   , loadSavedHeaders
+  , requireSecureFile
   , saveAccountData
   , saveCredentialsTo
   , savedHeadersPath
@@ -44,6 +49,7 @@ import System.Directory (createDirectory, doesFileExist)
 import System.Environment (setEnv)
 import System.IO.Error (ioeGetErrorString)
 import System.IO.Temp (withSystemTempDirectory)
+import System.Posix.Files (fileMode, getFileStatus, setFileMode)
 import Test.Hspec
   ( Spec
   , anyIOException
@@ -53,6 +59,7 @@ import Test.Hspec
   , it
   , shouldBe
   , shouldReturn
+  , shouldSatisfy
   , shouldThrow
   )
 import Test.QuickCheck
@@ -68,9 +75,105 @@ import Test.QuickCheck.Monadic (assert, monadicIO, pick, run)
 
 spec :: Spec
 spec = do
+  secureFileSpec
+  secureWriteSpec
+  checkSessionFilesSpec
   sessionSpec
   saveCredentialsSpec
   accountDataSpec
+
+
+secureFileSpec :: Spec
+secureFileSpec = describe "module Network.HStratus.Internal.Session (file security)" $ do
+  describe "checkSecureMode" $ do
+    it "accepts mode 0o600" $
+      checkSecureMode 0o600 "/tmp/test" `shouldBe` Right ()
+    it "accepts mode 0o400 (read-only owner)" $
+      checkSecureMode 0o400 "/tmp/test" `shouldBe` Right ()
+    it "accepts mode 0o700 (owner-execute)" $
+      checkSecureMode 0o700 "/tmp/test" `shouldBe` Right ()
+    it "rejects mode 0o644 (world-readable)" $
+      checkSecureMode 0o644 "/tmp/test" `shouldSatisfy` isLeft
+    it "rejects mode 0o640 (group-readable)" $
+      checkSecureMode 0o640 "/tmp/test" `shouldSatisfy` isLeft
+    it "rejects mode 0o604 (world-readable, no group)" $
+      checkSecureMode 0o604 "/tmp/test" `shouldSatisfy` isLeft
+    it "includes the path in the error message" $
+      case checkSecureMode 0o644 "/some/path" of
+        Left msg -> "/some/path" `isInfixOf` msg `shouldBe` True
+        Right () -> fail "expected Left"
+    it "includes chmod hint in the error message" $
+      case checkSecureMode 0o644 "/some/path" of
+        Left msg -> "chmod 600" `isInfixOf` msg `shouldBe` True
+        Right () -> fail "expected Left"
+  describe "requireSecureFile" $ around withTmpDir $ do
+    it "does nothing when the file is absent" $ \tmpDir -> do
+      requireSecureFile (tmpDir </> "absent.txt")
+    it "does nothing when the file has mode 0o600" $ \tmpDir -> do
+      let path = tmpDir </> "secure.txt"
+      writeFile path "content"
+      setFileMode path 0o600
+      requireSecureFile path
+    it "throws when the file has mode 0o644" $ \tmpDir -> do
+      let path = tmpDir </> "insecure.txt"
+      writeFile path "content"
+      setFileMode path 0o644
+      requireSecureFile path `shouldThrow` anyIOException
+    it "includes the path in the error for a bad-permission file" $ \tmpDir -> do
+      let path = tmpDir </> "insecure.txt"
+      writeFile path "content"
+      setFileMode path 0o644
+      requireSecureFile path
+        `shouldThrow` (\e -> tmpDir `isInfixOf` ioeGetErrorString e)
+
+
+shouldHaveMode600 :: FilePath -> IO ()
+shouldHaveMode600 path = do
+  mode <- fileMode <$> getFileStatus path
+  (mode .&. 0o777) `shouldBe` 0o600
+
+
+secureWriteSpec :: Spec
+secureWriteSpec = describe "module Network.HStratus.Internal.Session (secure writes)" $ do
+  context "saveCredentialsTo" $ around withTmpDir $ do
+    it "writes credentials.json with mode 0o600" $ \tmpDir -> do
+      saveCredentialsTo tmpDir exampleCred
+      shouldHaveMode600 (credentialsPath tmpDir)
+  context "updateSessionSavedHeaders" $ around useTmp $ do
+    it "writes session headers with mode 0o600" $ \appRoot -> do
+      saveCredentialsTo appRoot exampleCred
+      s <- loadSession
+      updateSessionSavedHeaders s id
+      shouldHaveMode600 (savedHeadersPath appRoot (sessionCreds s))
+  context "saveAccountData" $ around useTmp $ do
+    it "writes account-data with mode 0o600" $ \appRoot -> do
+      saveCredentialsTo appRoot exampleCred
+      s <- loadSession
+      saveAccountData s unknownAccountData
+      shouldHaveMode600 (accountDataPath appRoot (sessionCreds s))
+  context "loadClientId (new file)" $ around useTmp $ do
+    it "creates client-id file with mode 0o600" $ \appRoot -> do
+      saveCredentialsTo appRoot exampleCred
+      s <- loadSession
+      shouldHaveMode600 (clientIdPath appRoot (sessionCreds s))
+
+
+checkSessionFilesSpec :: Spec
+checkSessionFilesSpec = describe "checkSessionFiles / loadSession" $ around useTmp $ do
+  it "succeeds when credentials.json has mode 0o600" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    _ <- loadSession
+    pure ()
+  it "fails when credentials.json has mode 0o644" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    setFileMode (credentialsPath appRoot) 0o644
+    loadSession `shouldThrow` anyIOException
+  it "fails when session headers file has mode 0o644" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    s <- loadSession
+    updateSessionSavedHeaders s id
+    setFileMode (savedHeadersPath appRoot (sessionCreds s)) 0o644
+    loadSession `shouldThrow` anyIOException
 
 
 -- save credential somewhere
@@ -157,14 +260,18 @@ setupInvalid path = Text.writeFile path "[}"
 
 failsOnBadCredentials :: FilePath -> IO Session
 failsOnBadCredentials appRoot = do
-  setupInvalid (credentialsPath appRoot)
+  let path = credentialsPath appRoot
+  setupInvalid path
+  setFileMode path 0o600
   loadSession
 
 
 failsOnBadSavedHeaders :: FilePath -> IO SavedHeaders
 failsOnBadSavedHeaders appRoot = do
-  encodeFile (credentialsPath appRoot) exampleCred
-  setupInvalid (savedHeadersPath appRoot exampleCred)
+  saveCredentialsTo appRoot exampleCred
+  let shPath = savedHeadersPath appRoot exampleCred
+  setupInvalid shPath
+  setFileMode shPath 0o600
   s <- loadSession
   loadSavedHeaders s
 
@@ -182,7 +289,7 @@ prop_loadsSession appRoot = monadicIO $ do
   preCreds <- pick genPreCredentials
   let creds = asCreds preCreds
   s <- run $ do
-    encodeFile (credentialsPath appRoot) creds
+    saveCredentialsTo appRoot creds
     loadSession
   assert $ sessionClientId s /= "" && creds == sessionCreds s
 
@@ -193,8 +300,10 @@ prop_readsStoredCliendId appRoot = monadicIO $ do
   fakeId <- pick $ genIndexedSuffix "client-id-"
   let creds = asCreds preCreds
   session <- run $ do
-    encodeFile (credentialsPath appRoot) creds
-    Text.writeFile (clientIdPath appRoot creds) fakeId
+    saveCredentialsTo appRoot creds
+    let cidPath = clientIdPath appRoot creds
+    Text.writeFile cidPath fakeId
+    setFileMode cidPath 0o600
     loadSession
   assert $ fakeId == sessionClientId session
 
@@ -205,9 +314,9 @@ prop_readsStoredSavedHeaders appRoot = monadicIO $ do
   savedHdrs <- pick genSaveHeaders
   let creds = asCreds preCreds
   savedHdrs' <- run $ do
-    encodeFile (credentialsPath appRoot) creds
-    encodeFile (savedHeadersPath appRoot creds) savedHdrs
+    saveCredentialsTo appRoot creds
     s <- loadSession
+    updateSessionSavedHeaders s (const savedHdrs)
     loadSavedHeaders s
   assert $ savedHdrs == savedHdrs'
 
@@ -219,9 +328,11 @@ prop_updatesSavedHeaders storeInitial appRoot = monadicIO $ do
   newHdrs <- pick genSaveHeaders
   let creds = asCreds preCreds
   loadedHdrs <- run $ do
-    encodeFile (credentialsPath appRoot) creds
-    when storeInitial $
-      encodeFile (savedHeadersPath appRoot creds) savedHdrs
+    saveCredentialsTo appRoot creds
+    when storeInitial $ do
+      let shPath = savedHeadersPath appRoot creds
+      encodeFile shPath savedHdrs
+      setFileMode shPath 0o600
     s <- loadSession
     updateSessionSavedHeaders s (const newHdrs)
     loadSavedHeaders s
@@ -357,7 +468,7 @@ prop_saveLoadAccountData appRoot = monadicIO $ do
   ad <- pick genAccountData
   let creds = asCreds preCreds
   loaded <- run $ do
-    encodeFile (credentialsPath appRoot) creds
+    saveCredentialsTo appRoot creds
     s <- loadSession
     saveAccountData s ad
     loadAccountData s

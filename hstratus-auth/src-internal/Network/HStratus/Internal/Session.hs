@@ -43,12 +43,17 @@ module Network.HStratus.Internal.Session
 
     -- * Utilities
   , encodeFileAtomic
+
+    -- * File security
+  , checkSecureMode
+  , requireSecureFile
+  , checkSessionFiles
   )
 where
 
 import Control.Applicative ((<|>))
-import Control.Exception (bracketOnError)
-import Control.Monad (forM, (>=>))
+import Control.Exception (bracketOnError, throwIO)
+import Control.Monad (forM, when, (>=>))
 import Data.Aeson
   ( FromJSON (..)
   , KeyValue (..)
@@ -68,6 +73,7 @@ import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as KeyMap
+import Data.Bits ((.&.))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char (isAlphaNum)
 import Data.Map.Strict (Map)
@@ -88,11 +94,13 @@ import Network.HStratus.Internal.Http
   , hTrustToken
   )
 import Network.HTTP.Types.Header (Header)
+import Numeric (showOct)
 import System.Directory (createDirectoryIfMissing, doesFileExist, removeFile, renameFile)
 import System.Environment.XDG.BaseDir (getUserConfigDir)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (hClose, openTempFile)
-import System.Posix.Files (setFileMode)
+import System.Posix.Files (fileMode, getFileStatus, setFileMode)
+import System.Posix.Types (FileMode)
 
 
 -- | Update the @SavedHeaders@ using some response headers
@@ -249,13 +257,14 @@ accountDataPath topDir creds = topDir </> Text.unpack (accountDataBase creds)
 -- | Persist @AccountData@ to the session's filesystem location
 saveAccountData :: Session -> AccountData -> IO ()
 saveAccountData Session{sessionCreds = creds, sessionTopDir = topDir} =
-  encodeFileAtomic (accountDataPath topDir creds)
+  secureEncodeFileAtomic (accountDataPath topDir creds)
 
 
 -- | Load persisted @AccountData@; returns @Nothing@ if the file is absent
 loadAccountData :: Session -> IO (Maybe AccountData)
 loadAccountData Session{sessionCreds = creds, sessionTopDir = topDir} = do
   let path = accountDataPath topDir creds
+  requireSecureFile path
   exists <- doesFileExist path
   if not exists
     then pure Nothing
@@ -277,9 +286,7 @@ saveCredentials creds = getUserConfigDir appBase >>= (`saveCredentialsTo` creds)
 saveCredentialsTo :: FilePath -> Credentials -> IO ()
 saveCredentialsTo topDir creds = do
   createDirectoryIfMissing True topDir
-  let credPath = credentialsPath topDir
-  encodeFileAtomic credPath creds
-  setFileMode credPath 0o600
+  secureEncodeFileAtomic (credentialsPath topDir) creds
 
 
 data Credentials = Credentials
@@ -386,7 +393,7 @@ updateSessionSavedHeaders
   -> IO ()
 updateSessionSavedHeaders s modSavedHeaders = do
   let dataPath = savedHeadersPath (sessionTopDir s) (sessionCreds s)
-      updateAndSave = encodeFileAtomic dataPath . modSavedHeaders
+      updateAndSave = secureEncodeFileAtomic dataPath . modSavedHeaders
       loadLast False = pure pristine
       loadLast True = eitherDecodeFileStrict dataPath >>= either (fail . show) pure
 
@@ -397,8 +404,11 @@ loadSession :: IO Session
 loadSession = do
   sessionTopDir <- getUserConfigDir appBase
   createDirectoryIfMissing True sessionTopDir
-  loadSessionOr sessionTopDir
-    >>= orFail "Credentials are missing or corrupt; run 'hstratus auth login' to authenticate"
+  s <-
+    loadSessionOr sessionTopDir
+      >>= orFail "Credentials are missing or corrupt; run 'hstratus auth login' to authenticate"
+  checkSessionFiles s
+  pure s
 
 
 -- | Saves a JSON @Value@ to @filepath@
@@ -423,8 +433,90 @@ encodeFileAtomic path value =
     )
 
 
+{- | Like 'encodeFileAtomic' but sets mode @0o600@ on the temp file before
+renaming, so the file is never visible at a more permissive mode.
+-}
+secureEncodeFileAtomic :: (ToJSON a) => FilePath -> a -> IO ()
+secureEncodeFileAtomic path value =
+  bracketOnError
+    (openTempFile (takeDirectory path) ".tmp")
+    (\(tmpPath, h) -> hClose h >> removeFile tmpPath)
+    ( \(tmpPath, h) -> do
+        LBS.hPut h (encode value)
+        hClose h
+        setFileMode tmpPath 0o600
+        renameFile tmpPath path
+    )
+
+
+-- | Write text to @path@ atomically, setting mode @0o600@ before renaming.
+secureWriteTextFileAtomic :: FilePath -> Text -> IO ()
+secureWriteTextFileAtomic path content =
+  bracketOnError
+    (openTempFile (takeDirectory path) ".tmp")
+    (\(tmpPath, h) -> hClose h >> removeFile tmpPath)
+    ( \(tmpPath, h) -> do
+        Text.hPutStr h content
+        hClose h
+        setFileMode tmpPath 0o600
+        renameFile tmpPath path
+    )
+
+
+{- | Pure permission check using the SSH convention: no group or world bits may
+be set.  Returns @Left@ with a descriptive message (including a @chmod 600@ hint)
+when the mode is too permissive.
+-}
+checkSecureMode :: FileMode -> FilePath -> Either String ()
+checkSecureMode mode path
+  | mode .&. 0o077 /= 0 =
+      Left $
+        path
+          <> " has unsafe permissions ("
+          <> showOct (fromIntegral mode :: Int) ""
+          <> "); fix with: chmod 600 "
+          <> path
+  | otherwise = Right ()
+
+
+{- | Verify that a file has secure permissions before it is read.  Does nothing
+if the file does not exist; absence is handled by the caller.  Throws an
+'IOError' when the file exists but its mode has group or world bits set.
+-}
+requireSecureFile :: FilePath -> IO ()
+requireSecureFile path = do
+  exists <- doesFileExist path
+  when exists $ do
+    mode <- fileMode <$> getFileStatus path
+    either (throwIO . userError) pure (checkSecureMode mode path)
+
+
+{- | Check that every session file that exists has secure permissions.  Absent
+files are skipped silently.  Throws an 'IOError' for the first file found with
+group or world bits set.
+
+Covers all five session paths: credentials, saved headers, client ID, account
+data, and the cookie jar.
+-}
+checkSessionFiles :: Session -> IO ()
+checkSessionFiles sess = do
+  let topDir = sessionTopDir sess
+      creds = sessionCreds sess
+  mapM_
+    requireSecureFile
+    [ credentialsPath topDir
+    , savedHeadersPath topDir creds
+    , clientIdPath topDir creds
+    , accountDataPath topDir creds
+    , cookiePath topDir creds
+    ]
+
+
 loadCredentials :: FilePath -> IO (Either String Credentials)
-loadCredentials = eitherDecodeFileStrict . credentialsPath
+loadCredentials topDir = do
+  let path = credentialsPath topDir
+  requireSecureFile path
+  eitherDecodeFileStrict path
 
 
 loadCredentials' :: FilePath -> IO (Either String (FilePath, Credentials))
@@ -452,6 +544,7 @@ loadSavedHeaders Session{sessionTopDir, sessionCreds} =
 loadSavedHeaders' :: FilePath -> Credentials -> IO (Either String SavedHeaders)
 loadSavedHeaders' topDir creds = do
   let dataPath = savedHeadersPath topDir creds
+  requireSecureFile dataPath
   pathExists <- doesFileExist dataPath
   if not pathExists
     then pure $ Right pristine
@@ -461,12 +554,13 @@ loadSavedHeaders' topDir creds = do
 loadClientId :: FilePath -> Credentials -> IO Text
 loadClientId topDir creds = do
   let dataPath = clientIdPath topDir creds
+  requireSecureFile dataPath
   pathExists <- doesFileExist dataPath
   if pathExists
     then Text.readFile dataPath
     else do
       anId <- newClientId
-      Text.writeFile dataPath anId
+      secureWriteTextFileAtomic dataPath anId
       pure anId
 
 
