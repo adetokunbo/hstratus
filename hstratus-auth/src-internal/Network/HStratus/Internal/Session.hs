@@ -47,6 +47,7 @@ module Network.HStratus.Internal.Session
     -- * File security
   , checkSecureMode
   , requireSecureFile
+  , checkSessionFiles
   )
 where
 
@@ -403,8 +404,11 @@ loadSession :: IO Session
 loadSession = do
   sessionTopDir <- getUserConfigDir appBase
   createDirectoryIfMissing True sessionTopDir
-  loadSessionOr sessionTopDir
-    >>= orFail "Credentials are missing or corrupt; run 'hstratus auth login' to authenticate"
+  s <-
+    loadSessionOr sessionTopDir
+      >>= orFail "Credentials are missing or corrupt; run 'hstratus auth login' to authenticate"
+  checkSessionFiles s
+  pure s
 
 
 -- | Saves a JSON @Value@ to @filepath@
@@ -485,6 +489,27 @@ requireSecureFile path = do
   when exists $ do
     mode <- fileMode <$> getFileStatus path
     either (throwIO . userError) pure (checkSecureMode mode path)
+
+
+{- | Check that every session file that exists has secure permissions.  Absent
+files are skipped silently.  Throws an 'IOError' for the first file found with
+group or world bits set.
+
+Covers all five session paths: credentials, saved headers, client ID, account
+data, and the cookie jar.
+-}
+checkSessionFiles :: Session -> IO ()
+checkSessionFiles sess = do
+  let topDir = sessionTopDir sess
+      creds = sessionCreds sess
+  mapM_
+    requireSecureFile
+    [ credentialsPath topDir
+    , savedHeadersPath topDir creds
+    , clientIdPath topDir creds
+    , accountDataPath topDir creds
+    , cookiePath topDir creds
+    ]
 
 
 loadCredentials :: FilePath -> IO (Either String Credentials)

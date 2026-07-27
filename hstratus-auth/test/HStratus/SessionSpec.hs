@@ -77,6 +77,7 @@ spec :: Spec
 spec = do
   secureFileSpec
   secureWriteSpec
+  checkSessionFilesSpec
   sessionSpec
   saveCredentialsSpec
   accountDataSpec
@@ -155,6 +156,24 @@ secureWriteSpec = describe "module Network.HStratus.Internal.Session (secure wri
       saveCredentialsTo appRoot exampleCred
       s <- loadSession
       shouldHaveMode600 (clientIdPath appRoot (sessionCreds s))
+
+
+checkSessionFilesSpec :: Spec
+checkSessionFilesSpec = describe "checkSessionFiles / loadSession" $ around useTmp $ do
+  it "succeeds when credentials.json has mode 0o600" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    _ <- loadSession
+    pure ()
+  it "fails when credentials.json has mode 0o644" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    setFileMode (credentialsPath appRoot) 0o644
+    loadSession `shouldThrow` anyIOException
+  it "fails when session headers file has mode 0o644" $ \appRoot -> do
+    saveCredentialsTo appRoot exampleCred
+    s <- loadSession
+    updateSessionSavedHeaders s id
+    setFileMode (savedHeadersPath appRoot (sessionCreds s)) 0o644
+    loadSession `shouldThrow` anyIOException
 
 
 -- save credential somewhere
@@ -310,8 +329,10 @@ prop_updatesSavedHeaders storeInitial appRoot = monadicIO $ do
   let creds = asCreds preCreds
   loadedHdrs <- run $ do
     saveCredentialsTo appRoot creds
-    when storeInitial $
-      encodeFile (savedHeadersPath appRoot creds) savedHdrs
+    when storeInitial $ do
+      let shPath = savedHeadersPath appRoot creds
+      encodeFile shPath savedHdrs
+      setFileMode shPath 0o600
     s <- loadSession
     updateSessionSavedHeaders s (const newHdrs)
     loadSavedHeaders s
