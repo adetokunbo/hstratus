@@ -14,6 +14,10 @@ module Hstratus.Cli.Notes
   , ListNotesOpts (..)
   , GetOpts (..)
   , GetFormat (..)
+  , ExportFolderDest (..)
+  , noteBasename
+  , uniqueBasenames
+  , resolveExportDest
   , notesParser
   , runNotes
   , findFolderByName
@@ -22,15 +26,19 @@ where
 
 import Control.Exception (catch)
 import Control.Monad ((>=>))
+import Data.Char (isAlphaNum)
 import Data.List (find)
 import Data.Maybe (catMaybes)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser, onServiceError, runWithApi)
 import Network.HStratus.Notes
 import Network.HStratus.Notes.Markdown (noteToMarkdown)
 import Options.Applicative
+import System.Directory (getHomeDirectory)
 import System.Exit (die, exitFailure)
+import System.FilePath ((</>))
 
 
 -- | Top-level Notes subcommand.
@@ -73,6 +81,71 @@ data GetOpts = GetOpts
   -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
+
+
+-- | Destination specifier for the @notes export-folder@ subcommand.
+data ExportFolderDest
+  = -- | write files under @DIR\/\<folder-slug\>\/@
+    ExportFolderRoot !FilePath
+  | -- | write files directly into @DIR@ (no slug appended)
+    ExportFolderOutput !FilePath
+  deriving (Eq, Show)
+
+
+{- | Map a note title to a filesystem-safe slug.
+
+Applies 'Data.Char.isAlphaNum' as a filter (non-alphanumeric characters become
+@\'-\'@), collapses consecutive hyphens, strips leading and trailing hyphens,
+and case-folds the result.  Returns @\"untitled\"@ for titles that produce an
+empty slug.
+-}
+noteBasename :: Text -> Text
+noteBasename t =
+  let mapped = Text.map (\c -> if isAlphaNum c then c else '-') (Text.toCaseFold t)
+      parts = filter (not . Text.null) (Text.splitOn "-" mapped)
+      slug = Text.intercalate "-" parts
+   in if Text.null slug then "untitled" else slug
+
+
+{- | Allocate a unique slug for each note title, preserving list order.
+
+@Nothing@ titles use @\"untitled\"@ as the base slug.  When a slug collides
+with one already allocated earlier in the list, a numeric suffix is appended
+(@\"-2\"@, @\"-3\"@, …) until the candidate is unique.  The first occurrence
+of a slug always keeps the bare form.
+-}
+uniqueBasenames :: [Maybe Text] -> [Text]
+uniqueBasenames = go Set.empty
+ where
+  go _ [] = []
+  go seen (mt : rest) =
+    let base = maybe "untitled" noteBasename mt
+        slug = findUnique seen base
+     in slug : go (Set.insert slug seen) rest
+  findUnique seen base
+    | Set.notMember base seen = base
+    | otherwise = findSuffix seen base 2
+  findSuffix seen base n =
+    let candidate = base <> "-" <> Text.pack (show n)
+     in if Set.notMember candidate seen
+          then candidate
+          else findSuffix seen base (n + 1)
+
+
+{- | Resolve the local output directory for a folder export, expanding @~@ via
+'System.Directory.getHomeDirectory' for the default case.
+
+* 'ExportFolderOutput' @dir@ — returns @dir@ unchanged.
+* 'ExportFolderRoot' @root@ — appends the slug of @folderName@ to @root@.
+* 'Nothing' — uses @~\/icloud-notes\/\<slug\>@ as the default.
+-}
+resolveExportDest :: Maybe ExportFolderDest -> Text -> IO FilePath
+resolveExportDest (Just (ExportFolderOutput dir)) _ = pure dir
+resolveExportDest (Just (ExportFolderRoot root)) folderName =
+  pure $ root </> Text.unpack (noteBasename folderName)
+resolveExportDest Nothing folderName = do
+  home <- getHomeDirectory
+  pure $ home </> "icloud-notes" </> Text.unpack (noteBasename folderName)
 
 
 -- | Optparse-applicative parser for the @notes@ subcommand.
