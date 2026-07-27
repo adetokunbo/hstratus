@@ -1,7 +1,7 @@
 # hstratus-notes — unofficial access to iCloud Notes
 
 `hstratus-notes` reads notes and folders from iCloud Notes using an authenticated
-session from [`hstratus-auth`](../hstratus-auth/).
+session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).
 
 Provides read-only access to the Notes CloudKit database: listing folders,
 fetching recent notes, and downloading note content.
@@ -81,15 +81,15 @@ cannot be decoded.
 
 ## CLI usage
 
-A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
+A command-line interface using this behaviour is provided by the [`hstratus`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#readme)
 package.
 
 | Command | Description |
 |---------|-------------|
-| [`hstratus notes list-note-folders`](../hstratus#hstratus-notes-list-note-folders) | List all Notes folders |
-| [`hstratus notes list-notes`](../hstratus#hstratus-notes-list-notes) | List notes, optionally filtered by folder name |
-| [`hstratus notes get`](../hstratus#hstratus-notes-get) | Fetch and display a note body |
-| [`hstratus notes export-folder`](../hstratus#hstratus-notes-export-folder) | Download all notes in a folder to local files |
+| [`hstratus notes list-note-folders`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-notes-list-note-folders) | List all Notes folders |
+| [`hstratus notes list-notes`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-notes-list-notes) | List notes, optionally filtered by folder name |
+| [`hstratus notes get`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-notes-get) | Fetch and display a note body |
+| [`hstratus notes export-folder`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-notes-export-folder) | Download all notes in a folder to local files |
 
 
 ---

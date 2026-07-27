@@ -81,8 +81,8 @@ at the time of writing).  When it does, authenticate again to refresh it.
 
 ## CLI usage
 
-A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
-package.  Use [`hstratus auth init`](../hstratus#hstratus-auth-init) and [`hstratus auth login`](../hstratus#hstratus-auth-login) to save credentials and authenticate.
+A command-line interface using this behaviour is provided by the [`hstratus`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#readme)
+package.  Use [`hstratus auth init`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-auth-init) and [`hstratus auth login`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-auth-login) to save credentials and authenticate.
 
 
 
