@@ -90,3 +90,9 @@ package.
 | [`hstratus notes list-notes`](../hstratus#hstratus-notes-list-notes) | List notes, optionally filtered by folder name |
 | [`hstratus notes get`](../hstratus#hstratus-notes-get) | Fetch and display a note body |
 | [`hstratus notes export-folder`](../hstratus#hstratus-notes-export-folder) | Download all notes in a folder to local files |
+
+
+## Trademark / Service mark
+
+Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+iCloud is a service mark of Apple Inc., registered in the U.S. and other countries and regions.

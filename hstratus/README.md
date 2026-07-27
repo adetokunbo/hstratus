@@ -209,3 +209,9 @@ All `drive` and `notes` subcommands accept these options:
 | `--log-file FILE` | Append HTTP exchanges to FILE |
 | `--log-bodies` | Include request bodies in the log |
 | `--redact` | Redact tokens and cookies in the log |
+
+
+## Trademark / Service mark
+
+Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+iCloud is a service mark of Apple Inc., registered in the U.S. and other countries and regions.

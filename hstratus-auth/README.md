@@ -84,3 +84,9 @@ at the time of writing).  When it does, authenticate again to refresh it.
 A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
 package.  Use [`hstratus auth init`](../hstratus#hstratus-auth-init) and [`hstratus auth login`](../hstratus#hstratus-auth-login) to save credentials and authenticate.
 
+
+
+## Trademark / Service mark
+
+Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+iCloud is a service mark of Apple Inc., registered in the U.S. and other countries and regions.
