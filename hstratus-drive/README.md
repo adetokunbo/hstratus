@@ -1,7 +1,7 @@
 # hstratus-drive — unofficial access to iCloud Drive
 
 `hstratus-drive` browses and downloads files from iCloud Drive using an
-authenticated session from [`hstratus-auth`](../hstratus-auth/).
+authenticated session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).
 
 Provides access to the main CloudDocs tree: fetching the root folder,
 listing folder contents, downloading files, and mutating the tree (create,
@@ -61,9 +61,9 @@ mutationExample da folder = do
 
 ## CLI usage
 
-A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
-package.  Use [`hstratus drive ls`](../hstratus#hstratus-drive-ls) to list Drive contents and
-[`hstratus drive cp`](../hstratus#hstratus-drive-cp) to download files.
+A command-line interface using this behaviour is provided by the [`hstratus`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#readme)
+package.  Use [`hstratus drive ls`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-drive-ls) to list Drive contents and
+[`hstratus drive cp`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-drive-cp) to download files.
 
 
 ---
