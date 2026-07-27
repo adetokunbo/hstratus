@@ -86,6 +86,9 @@ library
     , web-cookiejar        >=0.1.3 && <0.2
     , xdg-basedir          >=0.2 && <0.3
     , hstratus-auth:hstratus-auth-internal
+  default-language: Haskell2010
+  ghc-options:      -Wall -Wincomplete-uni-patterns -Wpartial-fields -fwarn-tabs
+
 
 library hstratus-auth-internal
   exposed-modules:  Network.HStratus.Internal.Endpoints
@@ -118,9 +121,6 @@ library hstratus-auth-internal
   default-language: Haskell2010
   ghc-options:      -Wall -Wincomplete-uni-patterns -Wpartial-fields -fwarn-tabs
 
-
-  default-language: Haskell2010
-  ghc-options:      -Wall -Wincomplete-uni-patterns -Wpartial-fields -fwarn-tabs
 
 test-suite test
   type:             exitcode-stdio-1.0
