@@ -86,7 +86,7 @@ package.  Use [`hstratus auth init`](../hstratus#hstratus-auth-init) and [`hstra
 
 
 
-## Trademark / Service mark
+---
 
 Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
 iCloud is a service mark of Apple Inc., registered in the U.S. and other countries and regions.
