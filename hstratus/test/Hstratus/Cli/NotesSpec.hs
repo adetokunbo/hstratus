@@ -14,6 +14,7 @@ module Hstratus.Cli.NotesSpec (spec) where
 import Hstratus.Cli (TopCommand (..), cliParser)
 import Hstratus.Cli.Notes
   ( ExportFolderDest (..)
+  , ExportFolderOpts (..)
   , GetFormat (..)
   , GetOpts (..)
   , ListNotesOpts (..)
@@ -79,6 +80,40 @@ spec = do
 
     it "rejects notes get with unknown --format value" $ do
       endsLeft_ $ parseCmd ["notes", "get", "Note/ABCD-1234", "--format", "html"]
+
+  describe "notes export-folder parser" $ do
+    it "parses export-folder FOLDER with defaults" $
+      parseCmd ["notes", "export-folder", "TukTuk"]
+        `endsRight` NotesCmd
+          (NotesExportFolder (ExportFolderOpts "TukTuk" Nothing GetMarkdown defaultOpts))
+
+    it "parses export-folder FOLDER --root DIR" $
+      parseCmd ["notes", "export-folder", "TukTuk", "--root", "/data"]
+        `endsRight` NotesCmd
+          (NotesExportFolder (ExportFolderOpts "TukTuk" (Just (ExportFolderRoot "/data")) GetMarkdown defaultOpts))
+
+    it "parses export-folder FOLDER --output DIR" $
+      parseCmd ["notes", "export-folder", "TukTuk", "--output", "/tmp/out"]
+        `endsRight` NotesCmd
+          (NotesExportFolder (ExportFolderOpts "TukTuk" (Just (ExportFolderOutput "/tmp/out")) GetMarkdown defaultOpts))
+
+    it "parses export-folder FOLDER --format text" $
+      parseCmd ["notes", "export-folder", "TukTuk", "--format", "text"]
+        `endsRight` NotesCmd
+          (NotesExportFolder (ExportFolderOpts "TukTuk" Nothing GetText defaultOpts))
+
+    it "parses export-folder FOLDER --format markdown" $
+      parseCmd ["notes", "export-folder", "TukTuk", "--format", "markdown"]
+        `endsRight` NotesCmd
+          (NotesExportFolder (ExportFolderOpts "TukTuk" Nothing GetMarkdown defaultOpts))
+
+    it "rejects export-folder with unknown --format value" $
+      endsLeft_ $
+        parseCmd ["notes", "export-folder", "TukTuk", "--format", "html"]
+
+    it "rejects export-folder with no FOLDER argument" $
+      endsLeft_ $
+        parseCmd ["notes", "export-folder"]
 
   describe "noteBasename" $ do
     it "plain ASCII title produces a hyphenated lowercase slug" $
