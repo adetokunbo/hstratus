@@ -43,12 +43,16 @@ module Network.HStratus.Internal.Session
 
     -- * Utilities
   , encodeFileAtomic
+
+    -- * File security
+  , checkSecureMode
+  , requireSecureFile
   )
 where
 
 import Control.Applicative ((<|>))
-import Control.Exception (bracketOnError)
-import Control.Monad (forM, (>=>))
+import Control.Exception (bracketOnError, throwIO)
+import Control.Monad (forM, when, (>=>))
 import Data.Aeson
   ( FromJSON (..)
   , KeyValue (..)
@@ -68,6 +72,7 @@ import Data.Aeson
 import Data.Aeson.Casing (aesonPrefix, snakeCase)
 import qualified Data.Aeson.Key as AesonKey
 import qualified Data.Aeson.KeyMap as KeyMap
+import Data.Bits ((.&.))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Char (isAlphaNum)
 import Data.Map.Strict (Map)
@@ -88,11 +93,13 @@ import Network.HStratus.Internal.Http
   , hTrustToken
   )
 import Network.HTTP.Types.Header (Header)
+import Numeric (showOct)
 import System.Directory (createDirectoryIfMissing, doesFileExist, removeFile, renameFile)
 import System.Environment.XDG.BaseDir (getUserConfigDir)
 import System.FilePath (takeDirectory, (</>))
 import System.IO (hClose, openTempFile)
-import System.Posix.Files (setFileMode)
+import System.Posix.Files (fileMode, getFileStatus, setFileMode)
+import System.Posix.Types (FileMode)
 
 
 -- | Update the @SavedHeaders@ using some response headers
@@ -423,8 +430,39 @@ encodeFileAtomic path value =
     )
 
 
+{- | Pure permission check using the SSH convention: no group or world bits may
+be set.  Returns @Left@ with a descriptive message (including a @chmod 600@ hint)
+when the mode is too permissive.
+-}
+checkSecureMode :: FileMode -> FilePath -> Either String ()
+checkSecureMode mode path
+  | mode .&. 0o077 /= 0 =
+      Left $
+        path
+          <> " has unsafe permissions ("
+          <> showOct (fromIntegral mode :: Int) ""
+          <> "); fix with: chmod 600 "
+          <> path
+  | otherwise = Right ()
+
+
+{- | Verify that a file has secure permissions before it is read.  Does nothing
+if the file does not exist; absence is handled by the caller.  Throws an
+'IOError' when the file exists but its mode has group or world bits set.
+-}
+requireSecureFile :: FilePath -> IO ()
+requireSecureFile path = do
+  exists <- doesFileExist path
+  when exists $ do
+    mode <- fileMode <$> getFileStatus path
+    either (throwIO . userError) pure (checkSecureMode mode path)
+
+
 loadCredentials :: FilePath -> IO (Either String Credentials)
-loadCredentials = eitherDecodeFileStrict . credentialsPath
+loadCredentials topDir = do
+  let path = credentialsPath topDir
+  requireSecureFile path
+  eitherDecodeFileStrict path
 
 
 loadCredentials' :: FilePath -> IO (Either String (FilePath, Credentials))
