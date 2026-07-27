@@ -121,7 +121,7 @@ recentsBody limit marker = encode $ object $ base <> cont
   base =
     [ "query"
         .= object
-          [ "recordType" .= noteRecordType
+          [ "recordType" .= ("SearchIndexes" :: Text)
           , "filterBy" .= [indexFilter "recents"]
           , "sortBy"
               .= [ object
