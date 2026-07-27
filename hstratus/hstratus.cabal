@@ -3,7 +3,7 @@ name:               hstratus
 version:            0.1.0.0
 synopsis:           Unified CLI for iCloud services
 description:
-  A single @hstratus@ executable with subcommands for iCloud authentication,
+  An @hstratus@ executable that provides subcommands for iCloud authentication,
   Drive, and Notes.
 
 license:            BSD-3-Clause
