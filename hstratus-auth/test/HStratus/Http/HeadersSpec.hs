@@ -25,6 +25,7 @@ import Network.HStratus.Trust (Setup2SADevice, TrustedPhone (..))
 import Network.HTTP.Client (Request (..), defaultManagerSettings, defaultRequest, newManager)
 import Network.HTTP.Types (RequestHeaders, hAccept, hContentType, methodPost)
 import System.IO.Temp (withSystemTempDirectory)
+import System.Posix.Files (setFileMode)
 import Test.Hspec (Spec, describe, it, shouldSatisfy)
 
 
@@ -155,15 +156,19 @@ withCapturedFetchTrustData action =
 writeSavedHeaders :: FilePath -> IO ()
 writeSavedHeaders tmpDir = do
   let creds = Credentials "alice@example.com" "password123"
+      shPath = savedHeadersPath tmpDir creds
       hdrs = SavedHeaders Nothing Nothing (Just "test-token") Nothing Nothing
-  encodeFile (savedHeadersPath tmpDir creds) hdrs
+  encodeFile shPath hdrs
+  setFileMode shPath 0o600
 
 
 writeSavedHeadersWithSession :: FilePath -> IO ()
 writeSavedHeadersWithSession tmpDir = do
   let creds = Credentials "alice@example.com" "password123"
+      shPath = savedHeadersPath tmpDir creds
       hdrs = SavedHeaders Nothing (Just "test-session-id") Nothing Nothing (Just "test-scnt")
-  encodeFile (savedHeadersPath tmpDir creds) hdrs
+  encodeFile shPath hdrs
+  setFileMode shPath 0o600
 
 
 withCapturedRequestSms :: ([(ByteString, RequestHeaders)] -> IO ()) -> IO ()

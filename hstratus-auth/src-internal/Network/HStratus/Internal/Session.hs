@@ -256,13 +256,14 @@ accountDataPath topDir creds = topDir </> Text.unpack (accountDataBase creds)
 -- | Persist @AccountData@ to the session's filesystem location
 saveAccountData :: Session -> AccountData -> IO ()
 saveAccountData Session{sessionCreds = creds, sessionTopDir = topDir} =
-  encodeFileAtomic (accountDataPath topDir creds)
+  secureEncodeFileAtomic (accountDataPath topDir creds)
 
 
 -- | Load persisted @AccountData@; returns @Nothing@ if the file is absent
 loadAccountData :: Session -> IO (Maybe AccountData)
 loadAccountData Session{sessionCreds = creds, sessionTopDir = topDir} = do
   let path = accountDataPath topDir creds
+  requireSecureFile path
   exists <- doesFileExist path
   if not exists
     then pure Nothing
@@ -284,9 +285,7 @@ saveCredentials creds = getUserConfigDir appBase >>= (`saveCredentialsTo` creds)
 saveCredentialsTo :: FilePath -> Credentials -> IO ()
 saveCredentialsTo topDir creds = do
   createDirectoryIfMissing True topDir
-  let credPath = credentialsPath topDir
-  encodeFileAtomic credPath creds
-  setFileMode credPath 0o600
+  secureEncodeFileAtomic (credentialsPath topDir) creds
 
 
 data Credentials = Credentials
@@ -393,7 +392,7 @@ updateSessionSavedHeaders
   -> IO ()
 updateSessionSavedHeaders s modSavedHeaders = do
   let dataPath = savedHeadersPath (sessionTopDir s) (sessionCreds s)
-      updateAndSave = encodeFileAtomic dataPath . modSavedHeaders
+      updateAndSave = secureEncodeFileAtomic dataPath . modSavedHeaders
       loadLast False = pure pristine
       loadLast True = eitherDecodeFileStrict dataPath >>= either (fail . show) pure
 
@@ -426,6 +425,36 @@ encodeFileAtomic path value =
     ( \(tmpPath, h) -> do
         LBS.hPut h (encode value)
         hClose h
+        renameFile tmpPath path
+    )
+
+
+{- | Like 'encodeFileAtomic' but sets mode @0o600@ on the temp file before
+renaming, so the file is never visible at a more permissive mode.
+-}
+secureEncodeFileAtomic :: (ToJSON a) => FilePath -> a -> IO ()
+secureEncodeFileAtomic path value =
+  bracketOnError
+    (openTempFile (takeDirectory path) ".tmp")
+    (\(tmpPath, h) -> hClose h >> removeFile tmpPath)
+    ( \(tmpPath, h) -> do
+        LBS.hPut h (encode value)
+        hClose h
+        setFileMode tmpPath 0o600
+        renameFile tmpPath path
+    )
+
+
+-- | Write text to @path@ atomically, setting mode @0o600@ before renaming.
+secureWriteTextFileAtomic :: FilePath -> Text -> IO ()
+secureWriteTextFileAtomic path content =
+  bracketOnError
+    (openTempFile (takeDirectory path) ".tmp")
+    (\(tmpPath, h) -> hClose h >> removeFile tmpPath)
+    ( \(tmpPath, h) -> do
+        Text.hPutStr h content
+        hClose h
+        setFileMode tmpPath 0o600
         renameFile tmpPath path
     )
 
@@ -490,6 +519,7 @@ loadSavedHeaders Session{sessionTopDir, sessionCreds} =
 loadSavedHeaders' :: FilePath -> Credentials -> IO (Either String SavedHeaders)
 loadSavedHeaders' topDir creds = do
   let dataPath = savedHeadersPath topDir creds
+  requireSecureFile dataPath
   pathExists <- doesFileExist dataPath
   if not pathExists
     then pure $ Right pristine
@@ -499,12 +529,13 @@ loadSavedHeaders' topDir creds = do
 loadClientId :: FilePath -> Credentials -> IO Text
 loadClientId topDir creds = do
   let dataPath = clientIdPath topDir creds
+  requireSecureFile dataPath
   pathExists <- doesFileExist dataPath
   if pathExists
     then Text.readFile dataPath
     else do
       anId <- newClientId
-      Text.writeFile dataPath anId
+      secureWriteTextFileAtomic dataPath anId
       pure anId
 
 

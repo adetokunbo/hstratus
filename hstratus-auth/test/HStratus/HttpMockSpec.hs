@@ -36,6 +36,7 @@ import Network.HTTP.Client (Request (..), defaultManagerSettings, defaultRequest
 import Network.HTTP.Types (methodPost)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
+import System.Posix.Files (setFileMode)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn, shouldSatisfy)
 
 
@@ -188,6 +189,7 @@ writeSavedHeaders tmpDir = do
       hdrsPath = savedHeadersPath tmpDir creds
       hdrs = SavedHeaders Nothing Nothing (Just "test-token") Nothing Nothing
   encodeFile hdrsPath hdrs
+  setFileMode hdrsPath 0o600
 
 
 isAuthenticated :: AuthState -> Bool
