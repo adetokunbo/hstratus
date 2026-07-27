@@ -64,3 +64,9 @@ mutationExample da folder = do
 A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
 package.  Use [`hstratus drive ls`](../hstratus#hstratus-drive-ls) to list Drive contents and
 [`hstratus drive cp`](../hstratus#hstratus-drive-cp) to download files.
+
+
+## Trademark / Service mark
+
+Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries and regions.
+iCloud is a service mark of Apple Inc., registered in the U.S. and other countries and regions.
