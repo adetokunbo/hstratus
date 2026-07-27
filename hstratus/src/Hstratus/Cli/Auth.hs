@@ -42,7 +42,7 @@ data AuthCommand
   = -- | save Apple ID credentials to the config directory
     AuthInit
   | -- | authenticate with iCloud
-    AuthLogin CommonOpts
+    AuthLogin !CommonOpts
   deriving (Eq, Show)
 
 

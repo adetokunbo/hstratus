@@ -33,19 +33,19 @@ import System.Exit (die, exitFailure)
 -- | Top-level Notes subcommand.
 data NotesCommand
   = -- | list all Notes folders
-    NotesListFolders CommonOpts
+    NotesListFolders !CommonOpts
   | -- | list notes, optionally filtered by folder name
-    NotesListNotes ListNotesOpts
+    NotesListNotes !ListNotesOpts
   | -- | fetch and display the body of a note by ID
-    NotesGet GetOpts
+    NotesGet !GetOpts
   deriving (Eq, Show)
 
 
 -- | Options for the @notes list-notes@ subcommand.
 data ListNotesOpts = ListNotesOpts
-  { lnFolder :: Maybe Text.Text
+  { lnFolder :: !(Maybe Text)
   -- ^ optional folder name to filter by; @Nothing@ lists recent notes across all folders
-  , lnCommon :: CommonOpts
+  , lnCommon :: !CommonOpts
   -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
@@ -62,11 +62,11 @@ data GetFormat
 
 -- | Options for the @notes get@ subcommand.
 data GetOpts = GetOpts
-  { gnNoteId :: NoteId
+  { gnNoteId :: !NoteId
   -- ^ UUID record name of the note to fetch
-  , gnFormat :: GetFormat
+  , gnFormat :: !GetFormat
   -- ^ output format; defaults to 'GetMarkdown'
-  , gnCommon :: CommonOpts
+  , gnCommon :: !CommonOpts
   -- ^ shared connection and logging options
   }
   deriving (Eq, Show)
