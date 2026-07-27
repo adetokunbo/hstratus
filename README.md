@@ -9,7 +9,7 @@
 | [`hstratus`](hstratus/#readme) | Unified command-line tool for all iCloud services |
 | [`hstratus-auth`](hstratus-auth/#readme) | Authenticate with iCloud using Apple ID credentials |
 | [`hstratus-drive`](hstratus-drive/#readme) | Browse and download files from iCloud Drive |
-| [`hstratus-notes`](hstratus-notes/#readme) | Read notes and folders from iCloud Notes |
+| [`hstratus-notes`](hstratus-notes/#readme) | Browse, fetch, and export notes and folders from iCloud Notes |
 
 `hstratus` provides a unifying CLI; it has subcommands for authentication, and accessing drive
 and notes.  The `hstratus-drive` and `hstratus-notes` packages both depend on `hstratus-auth`

@@ -13,6 +13,7 @@ hand-crafted byte literals.
 module HStratus.Notes.TestHelper
   ( mkNote
   , mkNoteGzip
+  , mkNoteZlib
   , mkEmptyGzip
   , runWith
   , runFields
@@ -29,6 +30,7 @@ module HStratus.Notes.TestHelper
 where
 
 import qualified Codec.Compression.GZip as GZip
+import qualified Codec.Compression.Zlib as Zlib
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int32)
@@ -59,6 +61,12 @@ mkNote noteText runs =
 mkNoteGzip :: Text -> [Encode.MessageBuilder] -> ByteString
 mkNoteGzip noteText runs =
   LBS.toStrict . GZip.compress . LBS.fromStrict $ mkNote noteText runs
+
+
+-- | Like 'mkNote' but zlib-compressed, suitable for 'decodeNoteBody'.
+mkNoteZlib :: Text -> [Encode.MessageBuilder] -> ByteString
+mkNoteZlib noteText runs =
+  LBS.toStrict . Zlib.compress . LBS.fromStrict $ mkNote noteText runs
 
 
 {- | Gzip-compressed empty proto (no document field).

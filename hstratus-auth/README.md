@@ -66,8 +66,7 @@ exampleWith api = loginWith readCode (\_ -> pure Nothing) chooseDevice api
   readCode codeLen = do
     Text.putStrLn $ "Enter the " <> Text.pack (show codeLen) <> "-digit code:"
     Text.getLine
-  chooseDevice (d:_) = pure d
-  chooseDevice []    = ioError (userError "no 2SA devices available")
+  chooseDevice (d :| _) = pure d
 ```
 
 If you already hold a `Requires2FA` or `Requires2SA` value from a prior call,

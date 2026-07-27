@@ -6,7 +6,7 @@ Copyright   : (c) 2026 Tim Emiola
 Maintainer  : Tim Emiola <adetokunbo@emio.la>
 SPDX-License-Identifier: BSD-3-Clause
 
-Decodes a gzip-compressed protobuf note body into the 'NoteText' domain type,
+Decodes a compressed protobuf note body (gzip or zlib) into the 'NoteText' domain type,
 bridging the wire representation in "Network.HStratus.Internal.Notes.Proto"
 and the public 'NoteText', 'NoteRun', and 'NoteStyle' types.
 -}
@@ -16,8 +16,10 @@ module Network.HStratus.Internal.Notes.Decode
 where
 
 import qualified Codec.Compression.GZip as GZip
+import qualified Codec.Compression.Zlib as Zlib
 import Control.Exception (SomeException, evaluate, try)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
@@ -37,15 +39,22 @@ import Network.HStratus.Internal.Notes.Proto
 
 {- | Decode a note body.  The input is the raw bytes from the CloudKit
 @TextDataEncrypted@ field after base64-decoding (Phase 1 does this in
-'noteRecordToNote').  The encoding is: gzip( protobuf( NoteStoreProto ) ).
+'noteRecordToNote').  The encoding is: compress( protobuf( NoteStoreProto ) )
+where the compressor is gzip (magic @\\x1f\\x8b@) or zlib (magic @\\x78@).
 Returns @Left@ if decompression fails or the protobuf cannot be parsed.
 -}
 decodeNoteBody :: ByteString -> IO (Either String NoteText)
 decodeNoteBody bs = do
-  decompressed <- try (evaluate (LBS.toStrict (GZip.decompress (LBS.fromStrict bs))))
+  decompressed <- try (evaluate (LBS.toStrict (decomp (LBS.fromStrict bs))))
   pure $ case (decompressed :: Either SomeException ByteString) of
-    Left e -> Left ("gzip decompression failed: " <> show e)
+    Left e -> Left ("decompression failed: " <> show e)
     Right strict -> fmap toNoteText (decodeNoteStoreProto strict)
+ where
+  decomp = if isGzip bs then GZip.decompress else Zlib.decompress
+
+
+isGzip :: ByteString -> Bool
+isGzip bs = BS.length bs >= 2 && BS.index bs 0 == 0x1f && BS.index bs 1 == 0x8b
 
 
 -- Map ProtoNote → NoteText.  The proto layer mirrors the wire schema; this

@@ -79,7 +79,7 @@ data Note = Note
   { noteInfo :: NoteSummary
   -- ^ Summary metadata for this note.
   , noteBodyBytes :: ByteString
-  {- ^ Raw @TextDataEncrypted@ bytes (gzip-compressed protobuf).
+  {- ^ Raw @TextDataEncrypted@ bytes (gzip- or zlib-compressed protobuf).
   Pass to 'Network.HStratus.Notes.decodeNoteBody' to get 'NoteText'.
   -}
   }

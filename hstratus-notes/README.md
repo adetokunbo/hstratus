@@ -55,10 +55,38 @@ folderNotesExample na fid = do
   mapM_ print notes
 ```
 
+### Fetching and decoding a note body
+
+```haskell
+import qualified Data.Text.IO as TIO
+import Network.HStratus.Notes
+import Network.HStratus.Notes.Markdown (noteToMarkdown)
+
+getNoteExample :: NotesApi -> NoteId -> IO ()
+getNoteExample na nid = do
+  mnote <- getNote na nid
+  case mnote of
+    Nothing   -> putStrLn "Note not found"
+    Just note -> do
+      result <- decodeNoteBody (noteBodyBytes note)
+      case result of
+        Left err -> putStrLn $ "Decode error: " <> err
+        Right nt -> TIO.putStrLn (noteToMarkdown nt)
+```
+
+`getNote` returns `Nothing` when the note has been deleted since the listing
+was fetched.  `decodeNoteBody` returns `Left` when the compressed protobuf
+cannot be decoded.
+
 
 ## CLI usage
 
 A command-line interface using this behaviour is provided by the [`hstratus`](../hstratus/#readme)
-package.  Use [`hstratus notes list-note-folders`](../hstratus#hstratus-notes-list-note-folders)
-to list folders and [`hstratus notes list-notes`](../hstratus#hstratus-notes-list-notes)
-to list notes (optionally filtered by folder name).
+package.
+
+| Command | Description |
+|---------|-------------|
+| [`hstratus notes list-note-folders`](../hstratus#hstratus-notes-list-note-folders) | List all Notes folders |
+| [`hstratus notes list-notes`](../hstratus#hstratus-notes-list-notes) | List notes, optionally filtered by folder name |
+| [`hstratus notes get`](../hstratus#hstratus-notes-get) | Fetch and display a note body |
+| [`hstratus notes export-folder`](../hstratus#hstratus-notes-export-folder) | Download all notes in a folder to local files |
