@@ -29,11 +29,15 @@ spec = describe "decodeNoteBody" $ do
     decodeNoteBody fixtureBytes
       `endsRight` NoteText{ntText = "Step 6b test", ntRuns = []}
 
+  it "decodes a zlib-compressed protobuf note and extracts the text" $
+    decodeNoteBody zlibFixtureBytes
+      `endsRight` NoteText{ntText = "Step 6b test", ntRuns = []}
+
   it "returns Left for bytes that are valid gzip but empty protobuf" $
     endsLeft_ $
       decodeNoteBody emptyNoteBytes
 
-  it "returns Left for a corrupt gzip payload" $
+  it "returns Left for a corrupt payload" $
     endsLeft_ $
       decodeNoteBody "\x00\x01\x02\x03"
 
@@ -109,6 +113,10 @@ baseRun =
 
 fixtureBytes :: ByteString
 fixtureBytes = mkNoteGzip "Step 6b test" []
+
+
+zlibFixtureBytes :: ByteString
+zlibFixtureBytes = mkNoteZlib "Step 6b test" []
 
 
 emptyNoteBytes :: ByteString
