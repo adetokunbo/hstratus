@@ -13,6 +13,7 @@ module HStratus.HttpMockSpec (spec) where
 
 import Control.Exception (try)
 import Data.Aeson (decode, encodeFile)
+import Data.Bits ((.&.))
 import qualified Data.ByteString.Char8 as BS8
 import Data.IORef (newIORef, readIORef, writeIORef)
 import Data.List.NonEmpty (NonEmpty (..))
@@ -29,14 +30,14 @@ import Network.HStratus.Http
   )
 import Network.HStratus.Http.Endpoints (Endpoints (..))
 import Network.HStratus.Internal.HttpErrors (AuthError (..))
-import Network.HStratus.Internal.Session (SavedHeaders (..), savedHeadersPath)
+import Network.HStratus.Internal.Session (SavedHeaders (..), cookiePath, savedHeadersPath)
 import Network.HStratus.Session (Credentials (..), Session (..))
 import Network.HStratus.Trust (Setup2SADevice, TrustedPhone (..))
 import Network.HTTP.Client (Request (..), defaultManagerSettings, defaultRequest, newManager)
 import Network.HTTP.Types (methodPost)
 import System.FilePath ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import System.Posix.Files (setFileMode)
+import System.Posix.Files (fileMode, getFileStatus, setFileMode)
 import Test.Hspec (Spec, describe, it, shouldBe, shouldReturn, shouldSatisfy)
 
 
@@ -132,6 +133,20 @@ spec = describe "Network.HStratus.Http.login" $ do
     withFreshMockApi "icloud-auth-2fa-locked" defaultScenario{snAccountLoginNeeds2FA = 1, snVerifyCodeLocks = True} $ \api -> do
       result <- try (loginWith (\_ -> pure "wrongcode") (\_ -> pure Nothing) (\_ -> pure testDevice) api) :: IO (Either AuthError AuthState)
       result `shouldSatisfy` (\case Left TwoFactorLocked -> True; _ -> False)
+
+  it "sets cookie jar mode to 0o600 after login" $
+    withSystemTempDirectory "icloud-auth-cookie-perms" $ \tmpDir ->
+      withMockApi tmpDir defaultScenario $ \api -> do
+        _ <- login api
+        let creds = Credentials "alice@example.com" "password123"
+            jarPath = cookiePath tmpDir creds
+        shouldHaveMode600 jarPath
+
+
+shouldHaveMode600 :: FilePath -> IO ()
+shouldHaveMode600 path = do
+  mode <- fileMode <$> getFileStatus path
+  (mode .&. 0o777) `shouldBe` 0o600
 
 
 withMockApi :: FilePath -> Scenario -> (Api -> IO a) -> IO a
