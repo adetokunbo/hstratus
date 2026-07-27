@@ -134,6 +134,8 @@ Usage: hstratus notes COMMAND
 Available commands:
   list-note-folders  List all iCloud Notes folders
   list-notes         List notes, optionally filtered by folder name
+  get                Fetch and display a note body (default format: markdown)
+  export-folder      Download all notes in a folder to local files
 ```
 
 #### `hstratus notes list-note-folders`
@@ -156,6 +158,44 @@ Usage: hstratus notes list-notes [--folder NAME] [--china] [--log]
 
 Lists notes sorted by modification time.  Pass `--folder` to restrict output to
 a single folder.
+
+#### `hstratus notes get`
+
+```
+Usage: hstratus notes get NOTE_ID [--format FORMAT] [--china] [--log]
+                          [--log-file FILE] [--log-bodies] [--redact]
+
+  NOTE_ID           UUID record name, as shown by list-notes
+  --format FORMAT   Output format: markdown (default) or text
+```
+
+Fetches the named note and prints its title, modification time, and body.
+`--format markdown` renders the body as Markdown; `--format text` emits the
+raw plain-text content.
+
+#### `hstratus notes export-folder`
+
+```
+Usage: hstratus notes export-folder FOLDER [--root DIR | --output DIR]
+                                    [--format FORMAT] [--china] [--log]
+                                    [--log-file FILE] [--log-bodies] [--redact]
+
+  FOLDER           Folder name (case-insensitive)
+  --root DIR       Save under DIR/<folder-slug>/
+  --output DIR     Save directly into DIR
+  --format FORMAT  Output format: markdown (default) or text
+```
+
+Downloads every note in the named folder and writes each one to a local file.
+Without `--root` or `--output`, files are placed under `~/icloud-notes/<folder-slug>/`.
+Locked notes are skipped with a message; network errors abort the run.
+
+```
+$ hstratus notes export-folder TukTuk --output /tmp/tuktuk
+saved /tmp/tuktuk/shopping-list.md
+saved /tmp/tuktuk/meeting-notes.md
+skipped ABC-123: note is locked
+```
 
 
 ## Common options
