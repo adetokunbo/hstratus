@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 
 {- |
@@ -20,8 +21,10 @@ module Hstratus.Cli.Notes
 where
 
 import Control.Exception (catch)
+import Control.Monad ((>=>))
 import Data.List (find)
 import Data.Maybe (catMaybes)
+import Data.Text (Text)
 import qualified Data.Text as Text
 import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser, onServiceError, runWithApi)
 import Network.HStratus.Notes
@@ -99,8 +102,7 @@ notesParser =
 
 getOptsParser :: Parser GetOpts
 getOptsParser =
-  GetOpts
-    <$> (NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "UUID record name (e.g. 68567409-5528-458C-9A00-7A2AB485CAD6), as shown by list-notes"))
+  (GetOpts . NoteId . Text.pack <$> argument str (metavar "NOTE_ID" <> help "UUID record name (e.g. 68567409-5528-458C-9A00-7A2AB485CAD6), as shown by list-notes"))
     <*> option
       ( eitherReader $ \s -> case s of
           "markdown" -> Right GetMarkdown
@@ -138,9 +140,7 @@ runNotes (NotesGet opts) = runGet opts
 
 
 runListFolders :: CommonOpts -> IO ()
-runListFolders opts =
-  withNotesApi opts $ \na ->
-    noteFolders na >>= mapM_ printFolder
+runListFolders opts = withNotesApi opts (noteFolders >=> mapM_ printFolder)
 
 
 runListNotes :: ListNotesOpts -> IO ()
@@ -180,10 +180,9 @@ runGet opts =
     putStrLn (Text.unpack body)
 
 
-resolveFolderName :: NotesApi -> Text.Text -> IO FolderId
+resolveFolderName :: NotesApi -> Text -> IO FolderId
 resolveFolderName na name = do
-  folders <- noteFolders na
-  case findFolderByName name folders of
+  findFolderByName name <$> noteFolders na >>= \case
     Just fid -> pure fid
     Nothing -> do
       putStrLn $ "No folder named '" <> Text.unpack name <> "'"
@@ -191,7 +190,7 @@ resolveFolderName na name = do
 
 
 -- | Find the first folder whose name matches the given string (case-insensitive); returns its 'FolderId'.
-findFolderByName :: Text.Text -> [NoteFolder] -> Maybe FolderId
+findFolderByName :: Text -> [NoteFolder] -> Maybe FolderId
 findFolderByName name = fmap nfId . find matchesName
  where
   matchesName nf = maybe False (\fn -> Text.toCaseFold fn == Text.toCaseFold name) (nfName nf)
