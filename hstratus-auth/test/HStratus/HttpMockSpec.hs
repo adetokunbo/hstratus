@@ -144,8 +144,8 @@ spec = describe "Network.HStratus.Http.login" $ do
 
 
 shouldHaveMode600 :: FilePath -> IO ()
-shouldHaveMode600 path = do
-  mode <- fileMode <$> getFileStatus path
+shouldHaveMode600 filePath = do
+  mode <- fileMode <$> getFileStatus filePath
   (mode .&. 0o777) `shouldBe` 0o600
 
 

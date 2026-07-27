@@ -144,6 +144,7 @@ uniqueBasenames = go Set.empty
   findUnique seen base
     | Set.notMember base seen = base
     | otherwise = findSuffix seen base 2
+  findSuffix :: Set.Set Text -> Text -> Int -> Text
   findSuffix seen base n =
     let candidate = base <> "-" <> Text.pack (show n)
      in if Set.notMember candidate seen
