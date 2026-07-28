@@ -24,9 +24,11 @@ import Hstratus.Cli.Drive
   , LsOpts (..)
   , LsSort (..)
   , displayNode
+  , displayNodes
   , filterNodes
   , formatSize
   , nodeDate
+  , nodeDisplaySize
   , nodeName
   , resolveLocalDest
   , sortNodes
@@ -143,10 +145,10 @@ testFileNode =
 spec :: Spec
 spec = do
   describe "formatSize" $ do
-    it "LsBytes 0 returns raw bytes" $
-      formatSize LsBytes 0 `shouldBe` "0 bytes"
-    it "LsBytes 1023 returns raw bytes" $
-      formatSize LsBytes 1023 `shouldBe` "1023 bytes"
+    it "LsBytes 0 returns raw count" $
+      formatSize LsBytes 0 `shouldBe` "0"
+    it "LsBytes 1023 returns raw count" $
+      formatSize LsBytes 1023 `shouldBe` "1023"
     it "LsHuman 1023 returns bytes (below 1024 threshold)" $
       formatSize LsHuman 1023 `shouldBe` "1023 bytes"
     it "LsHuman 1024 returns 1.0 KiB" $
@@ -171,6 +173,62 @@ spec = do
       case displayNode defaultLsOpts testFileNode of
         (c : _) -> c `shouldBe` ' '
         [] -> expectationFailure "expected non-empty string"
+
+  describe "displayNode column order" $ do
+    it "default: folder shows size and name" $
+      displayNode defaultLsOpts (mkFolder "Desktop" Nothing)
+        `shouldBe` "d 4096  Desktop"
+
+    it "default: file with size shows size and name" $
+      displayNode defaultLsOpts testFileNode
+        `shouldBe` "  1048576  notes.txt"
+
+    it "default: file with no size shows 0 and name" $
+      displayNode defaultLsOpts (mkFile "notes" Nothing Nothing)
+        `shouldBe` "  0  notes"
+
+    it "--long: folder with date has 16-char date and size columns, name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFolder "Desktop" (Just t1))
+        `shouldBe` "d 2026-07-01 10:00  4096  Desktop"
+
+    it "--long: folder with no date has 16 spaces for date, size column, and name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFolder "Desktop" Nothing)
+        `shouldBe` "d                   4096  Desktop"
+
+    it "--long: file with size has date, size right-justified, and name last" $
+      displayNode defaultLsOpts{lsLong = True, lsFormat = LsHuman} testFileNode
+        `shouldBe` "                    1.0 MiB  notes.txt"
+
+    it "--long: file with no size shows 0 and name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFile "notes" Nothing (Just t1))
+        `shouldBe` "  2026-07-01 10:00  0  notes"
+
+  describe "nodeDisplaySize" $ do
+    it "folder always returns 4096" $
+      nodeDisplaySize (mkFolder "Desktop" Nothing) `shouldBe` 4096
+
+    it "file with known size returns that size" $
+      nodeDisplaySize testFileNode `shouldBe` 1024 * 1024
+
+    it "file with no size returns 0" $
+      nodeDisplaySize (mkFile "notes" Nothing Nothing) `shouldBe` 0
+
+  describe "displayNodes alignment" $ do
+    it "aligns size column to the widest entry in the list" $ do
+      let nodes = [mkFolder "Desktop" Nothing, testFileNode]
+          [folderLine, fileLine] = displayNodes defaultLsOpts nodes
+      folderLine `shouldBe` "d    4096  Desktop"
+      fileLine `shouldBe` "  1048576  notes.txt"
+
+    it "single-node list uses no extra padding" $ do
+      let [line] = displayNodes defaultLsOpts [testFileNode]
+      line `shouldBe` "  1048576  notes.txt"
+
+    it "LsHuman: equal-width sizes produce no extra padding" $ do
+      let nodes = [mkFolder "Desktop" Nothing, testFileNode]
+          [folderLine, fileLine] = displayNodes defaultLsOpts{lsFormat = LsHuman} nodes
+      folderLine `shouldBe` "d 4.0 KiB  Desktop"
+      fileLine `shouldBe` "  1.0 MiB  notes.txt"
 
   describe "resolveLocalDest" $ do
     it "returns the exact output path when --output is set" $

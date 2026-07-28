@@ -20,7 +20,9 @@ module Hstratus.Cli.Drive
   , runDrive
   , resolveLocalDest
   , formatSize
+  , nodeDisplaySize
   , displayNode
+  , displayNodes
   , nodeDate
   , nodeName
   , sortNodes
@@ -35,6 +37,7 @@ import Data.Int (Int64)
 import Data.List (sortBy)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
+import Data.Maybe (fromMaybe)
 import Data.Ord (Down (..), comparing)
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -292,7 +295,8 @@ runLs opts =
     root <- driveRoot da
     nid <- navigatePath da (fnId root) (lsPath opts)
     nodes <- listFolder da nid
-    mapM_ (putStrLn . displayNode opts)
+    mapM_ putStrLn
+      . displayNodes opts
       . sortNodes (lsSort opts) (lsReverse opts)
       . filterNodes (lsFilter opts)
       $ nodes
@@ -310,7 +314,7 @@ navigatePath da nid (seg : segs) = do
 
 -- | Format a file size for display according to the given 'LsFormat'.
 formatSize :: LsFormat -> Int64 -> String
-formatSize LsBytes n = show n <> " bytes"
+formatSize LsBytes n = show n
 formatSize LsHuman n
   | n < 1024 = show n <> " bytes"
   | n < 1024 * 1024 = showFrac (fromIntegral n / 1024) <> " KiB"
@@ -331,16 +335,28 @@ showFrac x =
    in show whole <> "." <> show frac
 
 
-{- | Format a single 'DriveNode' for display in @ls@ output.
+padLeft :: Int -> String -> String
+padLeft n s = replicate (max 0 (n - length s)) ' ' <> s
 
-Folders are prefixed with @d@; files with a space.  With @--ids@, the node
-identifier is shown before the name.  With @--long@, the modification or
-creation date is appended after the name.  The size column uses the
-'LsFormat' from the supplied 'LsOpts'.
+
+{- | Returns the display size of a 'DriveNode' in bytes.
+
+Folders use a conventional 4096 bytes (matching @ls(1)@ block-size behaviour).
+Files with an unknown size report 0.
 -}
-displayNode :: LsOpts -> DriveNode -> String
-displayNode opts node =
-  typeStr <> idPart <> namePart <> datePart <> sizePart
+nodeDisplaySize :: DriveNode -> Int64
+nodeDisplaySize (DriveFolder _) = 4096
+nodeDisplaySize (DriveFile fd) = fromMaybe 0 (fdSize fd)
+
+
+sizeColWidth :: LsFormat -> [DriveNode] -> Int
+sizeColWidth fmt nodes =
+  maximum (1 : map (length . formatSize fmt . nodeDisplaySize) nodes)
+
+
+displayNodeW :: LsOpts -> Int -> DriveNode -> String
+displayNodeW opts width node =
+  typeStr <> idPart <> datePart <> sizePart <> namePart
  where
   typeStr = case node of
     DriveFolder _ -> "d "
@@ -350,17 +366,37 @@ displayNode opts node =
         DriveFolder fd -> Text.unpack (unDriveNodeId (fnId fd)) <> "  "
         DriveFile fd -> Text.unpack (unDriveNodeId (fdId fd)) <> "  "
     | otherwise = ""
-  namePart = Text.unpack (nodeName node)
   datePart
-    | lsLong opts = case nodeDate node of
-        Nothing -> ""
-        Just t -> "  " <> formatTime defaultTimeLocale "%Y-%m-%d %H:%M" t
+    | lsLong opts =
+        maybe (replicate 16 ' ') (formatTime defaultTimeLocale "%Y-%m-%d %H:%M") (nodeDate node)
+          <> "  "
     | otherwise = ""
-  sizePart = case node of
-    DriveFolder _ -> ""
-    DriveFile fd -> case fdSize fd of
-      Nothing -> ""
-      Just n -> "  (" <> formatSize (lsFormat opts) n <> ")"
+  sizePart = padLeft width (formatSize (lsFormat opts) (nodeDisplaySize node)) <> "  "
+  namePart = Text.unpack (nodeName node)
+
+
+{- | Format a single 'DriveNode' for display in @ls@ output.
+
+The column order is: type char, optional node ID, optional date, size, name.
+Name is always the last column.  Folders are prefixed with @d@; files with a
+space.  The date column (16 chars) is only emitted with @--long@.
+
+The size column is right-justified to the width of this node's own formatted
+size string.  For cross-listing alignment with consistent column widths, use
+'displayNodes' instead.
+-}
+displayNode :: LsOpts -> DriveNode -> String
+displayNode opts node =
+  displayNodeW opts (length (formatSize (lsFormat opts) (nodeDisplaySize node))) node
+
+
+{- | Format a list of 'DriveNode' values for display, with the size column
+right-justified to the widest entry in the list.
+-}
+displayNodes :: LsOpts -> [DriveNode] -> [String]
+displayNodes opts nodes = map (displayNodeW opts width) nodes
+ where
+  width = sizeColWidth (lsFormat opts) nodes
 
 
 -- | The display name of a node: folder name for folders, full file name (with extension) for files.
