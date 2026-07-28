@@ -117,7 +117,7 @@ data LsOpts = LsOpts
   , lsReverse :: !Bool
   -- ^ when @True@, reverse the sort order
   , lsLong :: !Bool
-  -- ^ when @True@, append dates to each output line
+  -- ^ when @True@, show a date column before the name
   , lsIds :: !Bool
   -- ^ when @True@, show the node identifier before the name
   , lsFilter :: !LsFilter
@@ -201,7 +201,7 @@ lsOptsParser =
     <*> lsFormatParser
     <*> lsSortParser
     <*> switch (long "reverse" <> help "Reverse the sort order")
-    <*> switch (long "long" <> help "Append dates to each output line")
+    <*> switch (long "long" <> help "Show date as a column before the name")
     <*> switch (long "ids" <> help "Show node identifier before the name")
     <*> lsFilterParser
     <*> commonOptsParser
@@ -312,7 +312,7 @@ navigatePath da nid (seg : segs) = do
     Just (DriveFolder fd) -> navigatePath da (fnId fd) segs
 
 
--- | Format a file size for display according to the given 'LsFormat'.
+-- | Format a node size for display according to the given 'LsFormat'.
 formatSize :: LsFormat -> Int64 -> String
 formatSize LsBytes n = show n
 formatSize LsHuman n
@@ -405,7 +405,7 @@ nodeName (DriveFolder fd) = fnName fd
 nodeName (DriveFile fd) = fileName fd
 
 
-{- | The relevant date of a node for sorting purposes.
+{- | The relevant date of a node, used for sorting and @--long@ date-column display.
 
 Folders use 'fnDateCreated'; files use 'fdDateModified' falling back to
 'fdDateCreated'.  Returns 'Nothing' when no date is available.
@@ -418,7 +418,8 @@ nodeDate (DriveFile fd) = fdDateModified fd <|> fdDateCreated fd
 {- | Sort a list of 'DriveNode' values by the given key, optionally reversed.
 
 'LsSortDate' orders newest first; nodes with no date sort last.
-'LsSortDefault' preserves the input order; @rev = True@ reverses it.
+'LsSortDefault' preserves the input order.  The @rev@ flag reverses the
+result regardless of sort key.
 -}
 sortNodes :: LsSort -> Bool -> [DriveNode] -> [DriveNode]
 sortNodes sort' rev = applyReverse rev . sortByKey sort'

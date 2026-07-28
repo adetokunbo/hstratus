@@ -86,10 +86,20 @@ Available commands:
 #### `hstratus drive ls`
 
 ```
-Usage: hstratus drive ls [[PATH]] [--china] [--log] [--log-file FILE]
-                         [--log-bodies] [--redact]
+Usage: hstratus drive ls [[PATH]] [--human | --si] [--sort KEY] [--reverse]
+                         [--long] [--ids] [--folders-only | --files-only]
+                         [--china] [--log] [--log-file FILE] [--log-bodies]
+                         [--redact]
 
-  [PATH]  Slash-separated path from root (e.g. Documents/Work)
+  [PATH]          Slash-separated path from root (e.g. Documents/Work)
+  --human         Human-readable sizes (KiB, MiB, …)
+  --si            SI sizes (KB, MB, …)
+  --sort KEY      Sort order: name or date
+  --reverse       Reverse the sort order
+  --long          Show date as a column before the name
+  --ids           Show node identifier before the name
+  --folders-only  Show only folders
+  --files-only    Show only files
 ```
 
 With no argument, lists the root folder.  With a path, lists that folder.
@@ -108,13 +118,16 @@ d   4096  Archive
 #### `hstratus drive cp`
 
 ```
-Usage: hstratus drive cp PATH [--root DIR | --output FILE]
-                         [--china] [--log] [--log-file FILE]
-                         [--log-bodies] [--redact]
+Usage: hstratus drive cp PATH [--root DIR | --output FILE] [--verbose]
+                         [--human | --si] [--china] [--log]
+                         [--log-file FILE] [--log-bodies] [--redact]
 
   PATH           Slash-separated path to the file in Drive
   --root DIR     Copy under DIR, mirroring the Drive path
   --output FILE  Copy to the exact local path FILE
+  --verbose      Print downloaded file entry in ls style
+  --human        Human-readable sizes (KiB, MiB, …)
+  --si           SI sizes (KB, MB, …)
 ```
 
 Without `--root` or `--output`, the file is placed under `~/icloud-drive/`
