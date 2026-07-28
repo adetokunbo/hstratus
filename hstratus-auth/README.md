@@ -3,7 +3,7 @@
 `hstratus-auth` authenticates with iCloud using Apple ID credentials stored on
 disk.  The full sign-in flow — SRP credential exchange followed by any required
 two-factor (2FA) or legacy two-step (2SA) challenge — runs automatically,
-prompting the terminal for verification codes when needed.  On success it caches
+prompting the user for verification codes when needed.  On success, it caches
 a session token for use with other iCloud services.
 
 
@@ -83,7 +83,6 @@ at the time of writing).  When it does, authenticate again to refresh it.
 
 A command-line interface using this behaviour is provided by the [`hstratus`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#readme)
 package.  Use [`hstratus auth init`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-auth-init) and [`hstratus auth login`](https://github.com/adetokunbo/hstratus/tree/main/hstratus/#hstratus-auth-login) to save credentials and authenticate.
-
 
 
 ---

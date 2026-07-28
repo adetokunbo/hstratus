@@ -6,7 +6,7 @@ and depends on [`hstratus-auth`](../hstratus-auth/#readme) for the authenticatio
 flow.
 
 
-## Warning — use at your own risk
+## Disclaimer — use at your own risk
 
 - This tool is **unofficial** and not supported by Apple.
 - The iCloud APIs it uses are undocumented and may change without notice.
@@ -16,7 +16,7 @@ flow.
 
 Run `hstratus auth init` once to save your Apple ID and password, then
 `hstratus auth login` to authenticate.  The session token is cached on disk and
-reused by the drive and notes subcommands until it expires.
+reused by the Drive and Notes subcommands until it expires.
 
 ```
 $ hstratus auth init

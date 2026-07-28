@@ -3,8 +3,8 @@
 `hstratus-notes` reads notes and folders from iCloud Notes using an authenticated
 session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).
 
-Provides read-only access to the Notes CloudKit database: listing folders,
-fetching recent notes, and downloading note content.
+The library provides read-only access to the Notes CloudKit database: listing
+folders, fetching recent notes, and downloading note content.
 
 
 ## Disclaimer — use at your own risk
