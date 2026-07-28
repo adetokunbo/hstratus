@@ -1,11 +1,11 @@
 # hstratus-drive — access to iCloud Drive
 
-`hstratus-drive` browses and downloads files from iCloud Drive using an
+`hstratus-drive` browses, downloads, and mutates files in iCloud Drive using an
 authenticated session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).
 
-Provides access to the main CloudDocs tree: fetching the root folder,
-listing folder contents, downloading files, and mutating the tree (create,
-rename, delete, upload).
+The library provides access to the main CloudDocs tree: fetching the root
+folder, listing folder contents, downloading files, and mutating the tree
+(create, rename, delete, upload).
 
 
 ## Disclaimer — use at your own risk
@@ -17,7 +17,7 @@ rename, delete, upload).
 ## Usage
 
 After a successful login with `hstratus-auth`, construct a `DriveApi` value and
-use it to browse or download files.
+use it to browse, download, or mutate files.
 
 ### Browsing
 
