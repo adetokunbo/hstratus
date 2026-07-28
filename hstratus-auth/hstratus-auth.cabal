@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hstratus-auth
-version:            0.1.0.0
+version:            0.1.0.1
 synopsis:           Authenticate with iCloud
 description:
   Authenticate with iCloud using Apple ID credentials stored on disk.
@@ -14,7 +14,9 @@ description:
   without warning if Apple changes their authentication protocol.
 license:            BSD-3-Clause
 license-file:       LICENSE
+author:             Tim Emiola
 maintainer:         Tim Emiola <adetokunbo@emio.la>
+copyright:          (c) 2026 Tim Emiola
 category:           Network
 build-type:         Simple
 tested-with:
