@@ -12,16 +12,26 @@ module Hstratus.Cli.DriveSpec (spec) where
 
 import Data.Either (isLeft)
 import Data.List.NonEmpty (NonEmpty (..))
+import Data.Text (Text)
+import Data.Time (UTCTime (..), fromGregorian, secondsToDiffTime)
 import Hstratus.Cli (TopCommand (..), cliParser)
 import Hstratus.Cli.Drive
   ( CpDest (..)
   , CpOpts (..)
   , DriveCommand (..)
+  , LsFilter (..)
   , LsFormat (..)
   , LsOpts (..)
+  , LsSort (..)
   , displayNode
+  , displayNodes
+  , filterNodes
   , formatSize
+  , nodeDate
+  , nodeDisplaySize
+  , nodeName
   , resolveLocalDest
+  , sortNodes
   )
 import Network.HStratus.Drive (DriveNode (..), FileData (..), FolderData (..))
 import Network.HStratus.Http.Cli (CommonOpts (..))
@@ -50,11 +60,58 @@ defaultOpts = CommonOpts False False Nothing False False
 
 
 defaultLsOpts :: LsOpts
-defaultLsOpts = LsOpts [] LsBytes defaultOpts
+defaultLsOpts =
+  LsOpts
+    { lsPath = []
+    , lsFormat = LsBytes
+    , lsSort = LsSortDefault
+    , lsReverse = False
+    , lsLong = False
+    , lsIds = False
+    , lsFilter = LsFilterAll
+    , lsCommon = defaultOpts
+    }
 
 
 defaultCpOpts :: CpOpts
 defaultCpOpts = CpOpts ("report.pdf" :| []) Nothing False LsBytes defaultOpts
+
+
+-- | Two fixed UTC timestamps for sort and date tests.  t2 is newer than t1.
+t1 :: UTCTime
+t1 = UTCTime (fromGregorian 2026 7 1) (secondsToDiffTime (10 * 3600))
+
+
+t2 :: UTCTime
+t2 = UTCTime (fromGregorian 2026 7 27) (secondsToDiffTime (9 * 3600))
+
+
+mkFolder :: Text -> Maybe UTCTime -> DriveNode
+mkFolder n d =
+  DriveFolder
+    FolderData
+      { fnId = "folder-id"
+      , fnEtag = "etag"
+      , fnName = n
+      , fnZone = "com.apple.CloudDocs"
+      , fnDateCreated = d
+      }
+
+
+mkFile :: Text -> Maybe UTCTime -> Maybe UTCTime -> DriveNode
+mkFile n created modified =
+  DriveFile
+    FileData
+      { fdId = "file-id"
+      , fdDocId = "doc-id"
+      , fdEtag = "etag"
+      , fdName = n
+      , fdExtension = Nothing
+      , fdZone = "com.apple.CloudDocs"
+      , fdSize = Nothing
+      , fdDateCreated = created
+      , fdDateModified = modified
+      }
 
 
 testFolderNode :: DriveNode
@@ -88,10 +145,10 @@ testFileNode =
 spec :: Spec
 spec = do
   describe "formatSize" $ do
-    it "LsBytes 0 returns raw bytes" $
-      formatSize LsBytes 0 `shouldBe` "0 bytes"
-    it "LsBytes 1023 returns raw bytes" $
-      formatSize LsBytes 1023 `shouldBe` "1023 bytes"
+    it "LsBytes 0 returns raw count" $
+      formatSize LsBytes 0 `shouldBe` "0"
+    it "LsBytes 1023 returns raw count" $
+      formatSize LsBytes 1023 `shouldBe` "1023"
     it "LsHuman 1023 returns bytes (below 1024 threshold)" $
       formatSize LsHuman 1023 `shouldBe` "1023 bytes"
     it "LsHuman 1024 returns 1.0 KiB" $
@@ -117,6 +174,67 @@ spec = do
         (c : _) -> c `shouldBe` ' '
         [] -> expectationFailure "expected non-empty string"
 
+  describe "displayNode column order" $ do
+    it "default: folder shows size and name" $
+      displayNode defaultLsOpts (mkFolder "Desktop" Nothing)
+        `shouldBe` "d 4096  Desktop"
+
+    it "default: file with size shows size and name" $
+      displayNode defaultLsOpts testFileNode
+        `shouldBe` "  1048576  notes.txt"
+
+    it "default: file with no size shows 0 and name" $
+      displayNode defaultLsOpts (mkFile "notes" Nothing Nothing)
+        `shouldBe` "  0  notes"
+
+    it "--long: folder with date has 16-char date and size columns, name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFolder "Desktop" (Just t1))
+        `shouldBe` "d 2026-07-01 10:00  4096  Desktop"
+
+    it "--long: folder with no date has 16 spaces for date, size column, and name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFolder "Desktop" Nothing)
+        `shouldBe` "d                   4096  Desktop"
+
+    it "--long: file with size has date, size right-justified, and name last" $
+      displayNode defaultLsOpts{lsLong = True, lsFormat = LsHuman} testFileNode
+        `shouldBe` "                    1.0 MiB  notes.txt"
+
+    it "--long: file with no size shows 0 and name last" $
+      displayNode defaultLsOpts{lsLong = True} (mkFile "notes" Nothing (Just t1))
+        `shouldBe` "  2026-07-01 10:00  0  notes"
+
+  describe "nodeDisplaySize" $ do
+    it "folder always returns 4096" $
+      nodeDisplaySize (mkFolder "Desktop" Nothing) `shouldBe` 4096
+
+    it "file with known size returns that size" $
+      nodeDisplaySize testFileNode `shouldBe` 1024 * 1024
+
+    it "file with no size returns 0" $
+      nodeDisplaySize (mkFile "notes" Nothing Nothing) `shouldBe` 0
+
+  describe "displayNodes alignment" $ do
+    it "aligns size column to the widest entry in the list" $ do
+      let nodes = [mkFolder "Desktop" Nothing, testFileNode]
+      case displayNodes defaultLsOpts nodes of
+        [folderLine, fileLine] -> do
+          folderLine `shouldBe` "d    4096  Desktop"
+          fileLine `shouldBe` "  1048576  notes.txt"
+        other -> expectationFailure $ "expected 2 lines, got " <> show (length other)
+
+    it "single-node list uses no extra padding" $ do
+      case displayNodes defaultLsOpts [testFileNode] of
+        [line] -> line `shouldBe` "  1048576  notes.txt"
+        other -> expectationFailure $ "expected 1 line, got " <> show (length other)
+
+    it "LsHuman: equal-width sizes produce no extra padding" $ do
+      let nodes = [mkFolder "Desktop" Nothing, testFileNode]
+      case displayNodes defaultLsOpts{lsFormat = LsHuman} nodes of
+        [folderLine, fileLine] -> do
+          folderLine `shouldBe` "d 4.0 KiB  Desktop"
+          fileLine `shouldBe` "  1.0 MiB  notes.txt"
+        other -> expectationFailure $ "expected 2 lines, got " <> show (length other)
+
   describe "resolveLocalDest" $ do
     it "returns the exact output path when --output is set" $
       resolveLocalDest defaultCpOpts{cpDest = Just (CpDestOutput "/tmp/out.pdf")} ("report.pdf" :| [])
@@ -131,34 +249,99 @@ spec = do
       resolveLocalDest defaultCpOpts ("Documents" :| ["report.pdf"])
         `shouldReturn` home </> "icloud-drive" </> "Documents/report.pdf"
 
+  describe "sortNodes" $ do
+    it "LsSortName False sorts alphabetically by display name" $ do
+      let nodes = [mkFolder "Zebra" Nothing, mkFile "apple" Nothing Nothing, mkFolder "Banana" Nothing]
+      map nodeName (sortNodes LsSortName False nodes) `shouldBe` ["Banana", "Zebra", "apple"]
+
+    it "LsSortName True sorts in reversed alphabetical order" $ do
+      let nodes = [mkFolder "Zebra" Nothing, mkFile "apple" Nothing Nothing, mkFolder "Banana" Nothing]
+      map nodeName (sortNodes LsSortName True nodes) `shouldBe` ["apple", "Zebra", "Banana"]
+
+    it "LsSortDate False puts newest first when files have fdDateModified" $ do
+      let nodes = [mkFile "old" (Just t1) (Just t1), mkFile "new" (Just t2) (Just t2)]
+      map nodeName (sortNodes LsSortDate False nodes) `shouldBe` ["new", "old"]
+
+    it "LsSortDate True puts oldest first" $ do
+      let nodes = [mkFile "old" (Just t1) (Just t1), mkFile "new" (Just t2) (Just t2)]
+      map nodeName (sortNodes LsSortDate True nodes) `shouldBe` ["old", "new"]
+
+    it "LsSortDate False uses fdDateModified for files and fnDateCreated for folders" $ do
+      let folder = mkFolder "Folder" (Just t1)
+          file = mkFile "file" (Just t1) (Just t2)
+      map nodeName (sortNodes LsSortDate False [folder, file]) `shouldBe` ["file", "Folder"]
+
+    it "LsSortDate False falls back to fdDateCreated when fdDateModified is Nothing" $ do
+      let fileCreatedLate = mkFile "file" (Just t2) Nothing
+          fileModifiedEarly = mkFile "earlier" (Just t1) (Just t1)
+      map nodeName (sortNodes LsSortDate False [fileModifiedEarly, fileCreatedLate])
+        `shouldBe` ["file", "earlier"]
+
+    it "LsSortDate False puts nodes with no date last" $ do
+      let fileNoDate = mkFile "no-date" Nothing Nothing
+          fileWithDate = mkFile "has-date" (Just t1) (Just t1)
+      map nodeName (sortNodes LsSortDate False [fileNoDate, fileWithDate])
+        `shouldBe` ["has-date", "no-date"]
+
+    it "LsSortDefault False preserves input order" $ do
+      let nodes = [mkFolder "B" Nothing, mkFile "a" Nothing Nothing, mkFolder "C" Nothing]
+      sortNodes LsSortDefault False nodes `shouldBe` nodes
+
+  describe "filterNodes" $ do
+    it "LsFilterFolders returns only folders" $ do
+      let mixed = [mkFolder "Folder" Nothing, mkFile "file" Nothing Nothing]
+      filterNodes LsFilterFolders mixed `shouldBe` [mkFolder "Folder" Nothing]
+
+    it "LsFilterFiles returns only files" $ do
+      let mixed = [mkFolder "Folder" Nothing, mkFile "file" Nothing Nothing]
+      filterNodes LsFilterFiles mixed `shouldBe` [mkFile "file" Nothing Nothing]
+
+    it "LsFilterAll returns the list unchanged" $ do
+      let mixed = [mkFolder "Folder" Nothing, mkFile "file" Nothing Nothing]
+      filterNodes LsFilterAll mixed `shouldBe` mixed
+
+  describe "nodeDate" $ do
+    it "folder returns fnDateCreated" $
+      nodeDate (mkFolder "F" (Just t1)) `shouldBe` Just t1
+
+    it "file with fdDateModified returns fdDateModified" $
+      nodeDate (mkFile "f" (Just t1) (Just t2)) `shouldBe` Just t2
+
+    it "file with fdDateModified = Nothing returns fdDateCreated" $
+      nodeDate (mkFile "f" (Just t1) Nothing) `shouldBe` Just t1
+
+    it "file with both dates Nothing returns Nothing" $
+      nodeDate (mkFile "f" Nothing Nothing) `shouldBe` Nothing
+
   describe "drive parser" $ do
     it "parses drive ls with no argument (root)" $
       parseCmd ["drive", "ls"]
-        `endsRight` DriveCmd (DriveLs (LsOpts [] LsBytes defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts)
 
     it "parses drive ls PATH" $
       parseCmd ["drive", "ls", "Documents/Work"]
-        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents", "Work"] LsBytes defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsPath = ["Documents", "Work"]})
 
     it "parses drive ls PATH with common flags" $
       parseCmd ["drive", "ls", "Documents", "--china", "--log"]
-        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents"] LsBytes defaultOpts{optChina = True, optLog = True}))
+        `endsRight` DriveCmd
+          (DriveLs defaultLsOpts{lsPath = ["Documents"], lsCommon = defaultOpts{optChina = True, optLog = True}})
 
     it "treats a leading slash in PATH as root listing" $
       parseCmd ["drive", "ls", "/Documents/Work"]
-        `endsRight` DriveCmd (DriveLs (LsOpts ["Documents", "Work"] LsBytes defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsPath = ["Documents", "Work"]})
 
     it "drive ls has lsFormat = LsBytes by default" $
       parseCmd ["drive", "ls"]
-        `endsRight` DriveCmd (DriveLs (LsOpts [] LsBytes defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts)
 
     it "drive ls --human sets lsFormat = LsHuman" $
       parseCmd ["drive", "ls", "--human"]
-        `endsRight` DriveCmd (DriveLs (LsOpts [] LsHuman defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsFormat = LsHuman})
 
     it "drive ls --si sets lsFormat = LsSI" $
       parseCmd ["drive", "ls", "--si"]
-        `endsRight` DriveCmd (DriveLs (LsOpts [] LsSI defaultOpts))
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsFormat = LsSI})
 
     it "drive ls --human --si fails (mutual exclusion)" $ do
       result <- parseCmd ["drive", "ls", "--human", "--si"]
@@ -198,4 +381,40 @@ spec = do
 
     it "rejects --root and --output together at parse time" $ do
       result <- parseCmd ["drive", "cp", "Documents/report.pdf", "--root", "/tmp/dl", "--output", "/tmp/out.pdf"]
+      result `shouldSatisfy` isLeft
+
+    it "drive ls --sort=name sets lsSort = LsSortName" $
+      parseCmd ["drive", "ls", "--sort=name"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsSort = LsSortName})
+
+    it "drive ls --sort=date sets lsSort = LsSortDate" $
+      parseCmd ["drive", "ls", "--sort=date"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsSort = LsSortDate})
+
+    it "drive ls --sort=unknown fails" $ do
+      result <- parseCmd ["drive", "ls", "--sort=unknown"]
+      result `shouldSatisfy` isLeft
+
+    it "drive ls --reverse sets lsReverse = True" $
+      parseCmd ["drive", "ls", "--reverse"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsReverse = True})
+
+    it "drive ls --long sets lsLong = True" $
+      parseCmd ["drive", "ls", "--long"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsLong = True})
+
+    it "drive ls --ids sets lsIds = True" $
+      parseCmd ["drive", "ls", "--ids"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsIds = True})
+
+    it "drive ls --folders-only sets lsFilter = LsFilterFolders" $
+      parseCmd ["drive", "ls", "--folders-only"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsFilter = LsFilterFolders})
+
+    it "drive ls --files-only sets lsFilter = LsFilterFiles" $
+      parseCmd ["drive", "ls", "--files-only"]
+        `endsRight` DriveCmd (DriveLs defaultLsOpts{lsFilter = LsFilterFiles})
+
+    it "drive ls --folders-only --files-only fails (mutual exclusion)" $ do
+      result <- parseCmd ["drive", "ls", "--folders-only", "--files-only"]
       result `shouldSatisfy` isLeft
