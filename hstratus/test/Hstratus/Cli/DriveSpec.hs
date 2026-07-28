@@ -216,19 +216,24 @@ spec = do
   describe "displayNodes alignment" $ do
     it "aligns size column to the widest entry in the list" $ do
       let nodes = [mkFolder "Desktop" Nothing, testFileNode]
-          [folderLine, fileLine] = displayNodes defaultLsOpts nodes
-      folderLine `shouldBe` "d    4096  Desktop"
-      fileLine `shouldBe` "  1048576  notes.txt"
+      case displayNodes defaultLsOpts nodes of
+        [folderLine, fileLine] -> do
+          folderLine `shouldBe` "d    4096  Desktop"
+          fileLine `shouldBe` "  1048576  notes.txt"
+        other -> expectationFailure $ "expected 2 lines, got " <> show (length other)
 
     it "single-node list uses no extra padding" $ do
-      let [line] = displayNodes defaultLsOpts [testFileNode]
-      line `shouldBe` "  1048576  notes.txt"
+      case displayNodes defaultLsOpts [testFileNode] of
+        [line] -> line `shouldBe` "  1048576  notes.txt"
+        other -> expectationFailure $ "expected 1 line, got " <> show (length other)
 
     it "LsHuman: equal-width sizes produce no extra padding" $ do
       let nodes = [mkFolder "Desktop" Nothing, testFileNode]
-          [folderLine, fileLine] = displayNodes defaultLsOpts{lsFormat = LsHuman} nodes
-      folderLine `shouldBe` "d 4.0 KiB  Desktop"
-      fileLine `shouldBe` "  1.0 MiB  notes.txt"
+      case displayNodes defaultLsOpts{lsFormat = LsHuman} nodes of
+        [folderLine, fileLine] -> do
+          folderLine `shouldBe` "d 4.0 KiB  Desktop"
+          fileLine `shouldBe` "  1.0 MiB  notes.txt"
+        other -> expectationFailure $ "expected 2 lines, got " <> show (length other)
 
   describe "resolveLocalDest" $ do
     it "returns the exact output path when --output is set" $
