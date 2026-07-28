@@ -96,13 +96,13 @@ With no argument, lists the root folder.  With a path, lists that folder.
 
 ```
 $ hstratus drive ls
-FOLDER  Desktop
-FOLDER  Documents
-FILE    notes.txt  (1024 bytes)
+d Desktop
+d Documents
+  notes.txt  (1024 bytes)
 
 $ hstratus drive ls Documents/Work
-FOLDER  Archive
-FILE    report.pdf  (204800 bytes)
+d Archive
+  report.pdf  (204800 bytes)
 ```
 
 #### `hstratus drive cp`

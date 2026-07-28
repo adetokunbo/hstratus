@@ -33,6 +33,7 @@ where
 import Data.Int (Int64)
 import Data.List (find)
 import Data.Maybe (fromMaybe)
+import Data.String (IsString (..))
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time (UTCTime)
@@ -41,6 +42,10 @@ import Data.Time (UTCTime)
 -- | Stable identifier for a node in iCloud Drive (the @drivewsid@ field).
 newtype DriveNodeId = DriveNodeId {unDriveNodeId :: Text}
   deriving (Eq, Show)
+
+
+instance IsString DriveNodeId where
+  fromString = DriveNodeId . Text.pack
 
 
 -- | The node ID for the root of the main CloudDocs tree.
