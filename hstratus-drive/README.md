@@ -1,4 +1,4 @@
-# hstratus-drive — unofficial access to iCloud Drive
+# hstratus-drive — access to iCloud Drive
 
 `hstratus-drive` browses and downloads files from iCloud Drive using an
 authenticated session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).

@@ -1,4 +1,4 @@
-# hstratus — unofficial Haskell client for iCloud services
+# hstratus — Haskell client for iCloud services
 
 `hstratus` is a set of Haskell libraries and a CLI for accessing iCloud services using an Apple ID.
 

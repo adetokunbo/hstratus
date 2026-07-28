@@ -1,4 +1,4 @@
-# hstratus-auth — unofficial authentication for iCloud services
+# hstratus-auth — authentication for iCloud services
 
 `hstratus-auth` authenticates with iCloud using Apple ID credentials stored on
 disk.  The full sign-in flow — SRP credential exchange followed by any required
