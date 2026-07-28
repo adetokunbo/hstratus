@@ -1,6 +1,6 @@
-# Revision history for icloud-drive
+# Revision history for hstratus
 
-`icloud-drive` uses [PVP Versioning][1].
+`hstratus` uses [PVP Versioning][1].
 
 ## 0.1.0.0 -- 2026-07-28
 

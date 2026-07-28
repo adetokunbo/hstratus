@@ -1,4 +1,4 @@
-# hstratus-notes — unofficial access to iCloud Notes
+# hstratus-notes — access to iCloud Notes
 
 `hstratus-notes` reads notes and folders from iCloud Notes using an authenticated
 session from [`hstratus-auth`](https://github.com/adetokunbo/hstratus/tree/main/hstratus-auth/).
