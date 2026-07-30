@@ -2,6 +2,10 @@
 
 `icloud-notes` uses [PVP Versioning][1].
 
+## 0.1.0.2 -- 2026-07-30
+
+* Remove unused `proto3-suite` dependency.
+
 ## 0.1.0.1 -- 2026-07-30
 
 * Relax `hstratus-auth` upper bound to `<0.3`.

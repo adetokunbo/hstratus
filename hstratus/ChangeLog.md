@@ -2,6 +2,10 @@
 
 `hstratus` uses [PVP Versioning][1].
 
+## 0.1.1.2 -- 2026-07-30
+
+* Remove unused `xdg-basedir` dependency.
+
 ## 0.1.1.1 -- 2026-07-30
 
 * Relax `http-client-tls` upper bound to `<0.5`.

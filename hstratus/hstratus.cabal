@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hstratus
-version:            0.1.1.1
+version:            0.1.1.2
 synopsis:           Unified CLI for iCloud services
 description:
   An @hstratus@ executable that provides subcommands for iCloud authentication,
@@ -50,7 +50,6 @@ library
     , optparse-applicative >=0.18 && <0.20
     , text                 >=1.2.3 && <2.2
     , time                 >=1.8 && <1.15
-    , xdg-basedir          >=0.2 && <0.3
   default-language: Haskell2010
   ghc-options:      -Wall -Wincomplete-uni-patterns -Wpartial-fields -fwarn-tabs
 
