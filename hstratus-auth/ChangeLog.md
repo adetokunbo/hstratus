@@ -2,6 +2,10 @@
 
 `icloud-auth` uses [PVP Versioning][1].
 
+## 0.2.0.2 -- 2026-07-30
+
+* Remove unused dependencies from main library
+
 ## 0.2.0.1 -- 2026-07-30
 
 * Relax `http-client-tls` upper bound to `<0.5`.
