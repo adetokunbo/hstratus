@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hstratus
-version:            0.1.0.0
+version:            0.1.1.0
 synopsis:           Unified CLI for iCloud services
 description:
   An @hstratus@ executable that provides subcommands for iCloud authentication,
@@ -33,6 +33,7 @@ library
   exposed-modules:
     Hstratus.Cli
     Hstratus.Cli.Auth
+    Hstratus.Cli.Common
     Hstratus.Cli.Drive
     Hstratus.Cli.Notes
   hs-source-dirs:   src
@@ -42,8 +43,7 @@ library
     , containers           >=0.6 && <0.8
     , directory            >=1.3 && <1.4
     , filepath             >=1.4 && <1.6
-    , hstratus-auth        >=0.1 && <0.2
-    , hstratus-auth:hstratus-auth-cli >=0.1 && <0.2
+    , hstratus-auth        >=0.2 && <0.3
     , hstratus-drive       >=0.1 && <0.2
     , hstratus-notes       >=0.1 && <0.2
     , http-client-tls      >=0.3 && <0.4
@@ -69,6 +69,7 @@ test-suite test
   hs-source-dirs:   test
   other-modules:
     Hstratus.Cli.AuthSpec
+    Hstratus.Cli.CommonSpec
     Hstratus.Cli.DriveSpec
     Hstratus.Cli.NotesSpec
   default-language: Haskell2010
@@ -80,7 +81,7 @@ test-suite test
     , filepath             >=1.4 && <1.6
     , hspec                >=2.1 && <3.0
     , hstratus
-    , hstratus-auth:hstratus-auth-cli
+    , hstratus-auth        >=0.2 && <0.3
     , hstratus-drive
     , hstratus-notes
     , optparse-applicative >=0.18 && <0.19

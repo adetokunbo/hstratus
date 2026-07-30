@@ -1,16 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 {- |
-Module      : HStratus.Http.CliSpec
+Module      : Hstratus.Cli.CommonSpec
 Copyright   : (c) 2026 Tim Emiola
 Maintainer  : Tim Emiola <adetokunbo@emio.la>
 SPDX-License-Identifier: BSD-3-Clause
 
-Tests for the CLI options parser in 'Network.HStratus.Http.Cli'.
+Tests for the shared CLI options parser in 'Hstratus.Cli.Common'.
 -}
-module HStratus.Http.CliSpec (spec) where
+module Hstratus.Cli.CommonSpec (spec) where
 
-import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser)
+import Hstratus.Cli.Common (commonOptsParser)
+import Network.HStratus.Http.Cli (CommonOpts (..))
 import Options.Applicative (ParserResult (..), defaultPrefs, execParserPure, fullDesc, info, renderFailure)
 import Test.Hspec
 import Test.Hspec.Benri (endsRight)
@@ -21,7 +22,7 @@ defaultOpts = CommonOpts False False Nothing False False
 
 
 spec :: Spec
-spec = describe "Network.HStratus.Http.Cli.commonOptsParser" $ do
+spec = describe "Hstratus.Cli.Common.commonOptsParser" $ do
   it "defaults all flags to False with no log file" $
     pure (parseOpts []) `endsRight` defaultOpts
 

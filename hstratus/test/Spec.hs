@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Hstratus.Cli.AuthSpec as Auth
+import qualified Hstratus.Cli.CommonSpec as Common
 import qualified Hstratus.Cli.DriveSpec as Drive
 import qualified Hstratus.Cli.NotesSpec as Notes
 import System.IO
@@ -18,5 +19,6 @@ main = do
   hSetBuffering stderr NoBuffering
   hspec $ do
     Auth.spec
+    Common.spec
     Drive.spec
     Notes.spec

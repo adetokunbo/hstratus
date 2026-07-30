@@ -1,11 +1,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
+{- |
+Module      : Network.HStratus.Http.Cli
+Copyright   : (c) 2026 Tim Emiola
+Maintainer  : Tim Emiola <adetokunbo@emio.la>
+SPDX-License-Identifier: BSD-3-Clause
+
+CLI helpers shared by iCloud service commands: common options, log target
+resolution, logger construction, and the authenticated API runner.
+-}
 module Network.HStratus.Http.Cli
   ( -- * Common CLI options
     CommonOpts (..)
-  , commonOptsParser
 
     -- * Log target resolution
   , resolveLogTarget
@@ -39,7 +46,6 @@ import Network.HStratus.Http
 import Network.HStratus.Http.Endpoints (Realm (..), realmEndpoints)
 import Network.HStratus.Session (AccountData, Session, loadSession)
 import Network.HTTP.Client.TLS (newTlsManager)
-import Options.Applicative
 import System.Directory (createDirectoryIfMissing)
 import System.Environment.XDG.BaseDir (getUserCacheDir)
 import System.Exit (exitFailure)
@@ -61,18 +67,6 @@ data CommonOpts = CommonOpts
   -- ^ Redact sensitive headers (tokens, cookies) in the log.
   }
   deriving (Eq, Show)
-
-
--- | Parser for 'CommonOpts'.
-commonOptsParser :: Parser CommonOpts
-commonOptsParser =
-  CommonOpts
-    <$> switch (long "china" <> help "Use mainland China endpoints")
-    <*> switch (long "log" <> help "Append HTTP exchanges to the default log file")
-    <*> optional
-      (strOption (long "log-file" <> metavar "FILE" <> help "Append HTTP exchanges to FILE"))
-    <*> switch (long "log-bodies" <> help "Include request bodies in the HTTP exchange log")
-    <*> switch (long "redact" <> help "Redact sensitive headers (tokens, cookies) in the log")
 
 
 -- | Resolve the log file path from 'CommonOpts', or 'Nothing' if logging is disabled.

@@ -11,7 +11,6 @@ Test suite entry point for hstratus-auth.
 module Main where
 
 import qualified HStratus.ApiLoggerSpec as ApiLogger
-import qualified HStratus.Http.CliSpec as HttpCli
 import qualified HStratus.Http.EndpointsSpec as HttpEndpoints
 import qualified HStratus.Http.ErrorsSpec as HttpErrors
 import qualified HStratus.Http.HeadersSpec as HttpHeaders
@@ -38,7 +37,6 @@ main = do
     Session.spec
     Http.spec
     ApiLogger.spec
-    HttpCli.spec
     HttpEndpoints.spec
     HttpErrors.spec
     HttpHeaders.spec
