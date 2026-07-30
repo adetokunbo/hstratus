@@ -2,6 +2,10 @@
 
 `icloud-notes` uses [PVP Versioning][1].
 
+## 0.1.0.1 -- 2026-07-30
+
+* Relax `hstratus-auth` upper bound to `<0.3`.
+
 ## 0.1.0.0 -- 2026-07-28
 
 * Initial version.
