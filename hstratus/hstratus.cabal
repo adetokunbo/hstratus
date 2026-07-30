@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hstratus
-version:            0.1.1.0
+version:            0.1.1.1
 synopsis:           Unified CLI for iCloud services
 description:
   An @hstratus@ executable that provides subcommands for iCloud authentication,
@@ -46,8 +46,8 @@ library
     , hstratus-auth        >=0.2 && <0.3
     , hstratus-drive       >=0.1 && <0.2
     , hstratus-notes       >=0.1 && <0.2
-    , http-client-tls      >=0.3 && <0.4
-    , optparse-applicative >=0.18 && <0.19
+    , http-client-tls      >=0.3 && <0.5
+    , optparse-applicative >=0.18 && <0.20
     , text                 >=1.2.3 && <2.2
     , time                 >=1.8 && <1.15
     , xdg-basedir          >=0.2 && <0.3
@@ -84,6 +84,6 @@ test-suite test
     , hstratus-auth        >=0.2 && <0.3
     , hstratus-drive
     , hstratus-notes
-    , optparse-applicative >=0.18 && <0.19
+    , optparse-applicative >=0.18 && <0.20
     , text                 >=1.2.3 && <2.2
     , time                 >=1.8 && <1.15
