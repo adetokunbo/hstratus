@@ -124,23 +124,23 @@ emptyNoteBytes = mkEmptyGzip
 
 
 strikethroughFixtureBytes :: ByteString
-strikethroughFixtureBytes = mkNoteGzip "hi" [runFields 2 [(7, 1)]]
+strikethroughFixtureBytes = mkNoteGzip "hi" [strikethroughRun 2]
 
 
 bulletIndent1FixtureBytes :: ByteString
-bulletIndent1FixtureBytes = mkNoteGzip "hi" [runWith 1 (psStyleType 100 <> psIndentAmount 1)]
+bulletIndent1FixtureBytes = mkNoteGzip "hi" [runWith 1 (psIndentAmount 1 (psStyleType 100))]
 
 
 checklistDoneFixtureBytes :: ByteString
-checklistDoneFixtureBytes = mkNoteGzip "hi" [runWith 1 (psStyleType 103 <> psChecklist True)]
+checklistDoneFixtureBytes = mkNoteGzip "hi" [runWith 1 (psChecklist True (psStyleType 103))]
 
 
 checklistUndoneFixtureBytes :: ByteString
-checklistUndoneFixtureBytes = mkNoteGzip "hi" [runWith 1 (psStyleType 103 <> psChecklist False)]
+checklistUndoneFixtureBytes = mkNoteGzip "hi" [runWith 1 (psChecklist False (psStyleType 103))]
 
 
 numberedListStart3FixtureBytes :: ByteString
-numberedListStart3FixtureBytes = mkNoteGzip "hi" [runWith 1 (psStyleType 102 <> psListStart 3)]
+numberedListStart3FixtureBytes = mkNoteGzip "hi" [runWith 1 (psListStart 3 (psStyleType 102))]
 
 
 blockQuoteFixtureBytes :: ByteString

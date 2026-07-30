@@ -6,8 +6,7 @@ Copyright   : (c) 2026 Tim Emiola
 Maintainer  : Tim Emiola <adetokunbo@emio.la>
 SPDX-License-Identifier: BSD-3-Clause
 
-Tests for the proto3-wire decoders in
-'Network.HStratus.Internal.Notes.Proto'.
+Tests for the protobuf decoders in 'Network.HStratus.Internal.Notes.Proto'.
 -}
 module HStratus.Notes.ProtoSpec (spec) where
 
@@ -131,19 +130,19 @@ noteWithRunBytes = mkNote "hi" [runWith 2 (psStyleType 1)]
 
 
 noteWithStrikethroughBytes :: ByteString
-noteWithStrikethroughBytes = mkNote "hi" [runFields 2 [(7, 1)]]
+noteWithStrikethroughBytes = mkNote "hi" [strikethroughRun 2]
 
 
 bulletIndent1Bytes :: ByteString
-bulletIndent1Bytes = mkNote "hi" [runWith 1 (psStyleType 100 <> psIndentAmount 1)]
+bulletIndent1Bytes = mkNote "hi" [runWith 1 (psIndentAmount 1 (psStyleType 100))]
 
 
 checklistDoneBytes :: ByteString
-checklistDoneBytes = mkNote "hi" [runWith 1 (psStyleType 103 <> psChecklist True)]
+checklistDoneBytes = mkNote "hi" [runWith 1 (psChecklist True (psStyleType 103))]
 
 
 checklistUndoneBytes :: ByteString
-checklistUndoneBytes = mkNote "hi" [runWith 1 (psStyleType 103 <> psChecklist False)]
+checklistUndoneBytes = mkNote "hi" [runWith 1 (psChecklist False (psStyleType 103))]
 
 
 checklistAbsentBytes :: ByteString
@@ -151,7 +150,7 @@ checklistAbsentBytes = mkNote "hi" [runWith 1 (psStyleType 103)]
 
 
 numberedListStart3Bytes :: ByteString
-numberedListStart3Bytes = mkNote "hi" [runWith 1 (psStyleType 102 <> psListStart 3)]
+numberedListStart3Bytes = mkNote "hi" [runWith 1 (psListStart 3 (psStyleType 102))]
 
 
 blockQuoteBytes :: ByteString

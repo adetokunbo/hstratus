@@ -2,6 +2,10 @@
 
 `icloud-notes` uses [PVP Versioning][1].
 
+## 0.1.0.3 -- 2026-07-30
+
+* Add `protobuf` and `cereal` dependencies; replace `proto3-wire` for protobuf decoding.
+
 ## 0.1.0.2 -- 2026-07-30
 
 * Remove unused `proto3-suite` dependency.
