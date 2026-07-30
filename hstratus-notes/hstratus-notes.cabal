@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               hstratus-notes
-version:            0.1.0.2
+version:            0.1.0.3
 synopsis:           Access iCloud Notes
 description:
   Browse notes and folders from iCloud Notes using an authenticated session
@@ -71,6 +71,8 @@ library hstratus-notes-internal
     , http-client          >=0.5 && <0.8
     , http-types           >=0.12.1 && <0.13
     , hstratus-auth        >=0.1 && <0.3
+    , cereal               >=0.5 && <0.6
+    , protobuf             >=0.2 && <0.3
     , proto3-wire          >=1.0 && <2
     , text                 >=1.2.3 && <2.2
     , time                 >=1.9 && <1.15
@@ -106,6 +108,8 @@ test-suite test
     , hstratus-auth                >=0.1 && <0.3
     , hstratus-notes
     , hstratus-notes:hstratus-notes-internal
+    , cereal                       >=0.5 && <0.6
+    , protobuf                     >=0.2 && <0.3
     , proto3-wire                  >=1.0 && <2
     , QuickCheck                   >=2.14 && <3
     , temporary                    >=1.2 && <1.4
