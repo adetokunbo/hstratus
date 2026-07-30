@@ -73,7 +73,6 @@ library hstratus-notes-internal
     , hstratus-auth        >=0.1 && <0.3
     , cereal               >=0.5 && <0.6
     , protobuf             >=0.2 && <0.3
-    , proto3-wire          >=1.0 && <2
     , text                 >=1.2.3 && <2.2
     , time                 >=1.9 && <1.15
     , zlib                 >=0.6 && <0.8
@@ -110,7 +109,6 @@ test-suite test
     , hstratus-notes:hstratus-notes-internal
     , cereal                       >=0.5 && <0.6
     , protobuf                     >=0.2 && <0.3
-    , proto3-wire                  >=1.0 && <2
     , QuickCheck                   >=2.14 && <3
     , temporary                    >=1.2 && <1.4
     , text                         >=1.2.3 && <2.2

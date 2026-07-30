@@ -7,7 +7,7 @@ Maintainer  : Tim Emiola <adetokunbo@emio.la>
 SPDX-License-Identifier: BSD-3-Clause
 
 Programmatic proto\/gzip fixture builders for 'ProtoSpec' and 'DecodeSpec':
-encodes domain values with @proto3-wire@ and compresses with @zlib@, avoiding
+encodes domain values with @protobuf@ and compresses with @zlib@, avoiding
 hand-crafted byte literals.
 -}
 module HStratus.Notes.TestHelper
@@ -16,7 +16,8 @@ module HStratus.Notes.TestHelper
   , mkNoteZlib
   , mkEmptyGzip
   , runWith
-  , runFields
+  , plainRun
+  , strikethroughRun
   , psStyleType
   , psIndentAmount
   , psChecklist
@@ -34,37 +35,54 @@ import qualified Codec.Compression.Zlib as Zlib
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Int (Int32)
+import Data.ProtocolBuffers (encodeMessage, putField)
+import Data.Serialize (runPut)
 import Data.Text (Text)
-import qualified Data.Text.Lazy as TL
 import Network.HStratus.Internal.Notes.Note
   ( NoteRun (..)
   , NoteStyle (..)
   , NoteText (..)
   )
-import Network.HStratus.Internal.Notes.Proto (ProtoParagraphStyle (..))
-import qualified Proto3.Wire.Encode as Encode
+import Network.HStratus.Internal.Notes.Proto
+  ( ProtoParagraphStyle (..)
+  , WireAttachmentInfo (..)
+  , WireAttributeRun (..)
+  , WireChecklist (..)
+  , WireDocument (..)
+  , WireNote (..)
+  , WireNoteStoreProto (..)
+  , WireParagraphStyle (..)
+  )
 
 
 {- | Encode a NoteStoreProto with the given note text and attribute runs.
 Returns raw (uncompressed) proto bytes.
 -}
-mkNote :: Text -> [Encode.MessageBuilder] -> ByteString
+mkNote :: Text -> [WireAttributeRun] -> ByteString
 mkNote noteText runs =
-  LBS.toStrict . Encode.toLazyByteString $
-    Encode.embedded 2 $
-      Encode.embedded 3 $
-        Encode.text 2 (TL.fromStrict noteText)
-          <> foldMap (Encode.embedded 5) runs
+  runPut . encodeMessage $
+    WireNoteStoreProto
+      { wnspDocument =
+          putField . Just $
+            WireDocument
+              { wdNote =
+                  putField . Just $
+                    WireNote
+                      { wnNoteText = putField (Just noteText)
+                      , wnAttributeRuns = putField runs
+                      }
+              }
+      }
 
 
 -- | Like 'mkNote' but gzip-compressed, suitable for 'decodeNoteBody'.
-mkNoteGzip :: Text -> [Encode.MessageBuilder] -> ByteString
+mkNoteGzip :: Text -> [WireAttributeRun] -> ByteString
 mkNoteGzip noteText runs =
   LBS.toStrict . GZip.compress . LBS.fromStrict $ mkNote noteText runs
 
 
 -- | Like 'mkNote' but zlib-compressed, suitable for 'decodeNoteBody'.
-mkNoteZlib :: Text -> [Encode.MessageBuilder] -> ByteString
+mkNoteZlib :: Text -> [WireAttributeRun] -> ByteString
 mkNoteZlib noteText runs =
   LBS.toStrict . Zlib.compress . LBS.fromStrict $ mkNote noteText runs
 
@@ -76,63 +94,112 @@ mkEmptyGzip :: ByteString
 mkEmptyGzip = LBS.toStrict (GZip.compress LBS.empty)
 
 
--- | An AttributeRun with the given length and a ParagraphStyle sub-message.
-runWith :: Int32 -> Encode.MessageBuilder -> Encode.MessageBuilder
-runWith len style = Encode.int32 1 len <> Encode.embedded 2 style
+-- | An 'WireAttributeRun' with the given length and a 'WireParagraphStyle' sub-message.
+runWith :: Int32 -> WireParagraphStyle -> WireAttributeRun
+runWith len style =
+  WireAttributeRun
+    { warLength = putField (Just len)
+    , warParagraphStyle = putField (Just style)
+    , warFontWeight = putField Nothing
+    , warUnderlined = putField Nothing
+    , warStrikethrough = putField Nothing
+    , warLink = putField Nothing
+    , warAttachmentInfo = putField Nothing
+    }
 
 
-{- | An AttributeRun with the given length and a list of (fieldNumber, value)
-pairs for inline fields (font_weight, underlined, strikethrough, etc.).
+{- | A 'WireAttributeRun' with the given length and all other fields absent.
+Use record-update syntax to set individual scalar fields for targeted tests.
 -}
-runFields :: Int32 -> [(Int32, Int32)] -> Encode.MessageBuilder
-runFields len fields =
-  Encode.int32 1 len
-    <> foldMap (\(fn, v) -> Encode.int32 (fromIntegral fn) v) fields
+plainRun :: Int32 -> WireAttributeRun
+plainRun len =
+  WireAttributeRun
+    { warLength = putField (Just len)
+    , warParagraphStyle = putField Nothing
+    , warFontWeight = putField Nothing
+    , warUnderlined = putField Nothing
+    , warStrikethrough = putField Nothing
+    , warLink = putField Nothing
+    , warAttachmentInfo = putField Nothing
+    }
 
 
--- ParagraphStyle field builders -------------------------------------------
-
-psStyleType :: Int32 -> Encode.MessageBuilder
-psStyleType = Encode.int32 1
-
-
-psIndentAmount :: Int32 -> Encode.MessageBuilder
-psIndentAmount = Encode.int32 4
+-- | A 'WireAttributeRun' of the given length with the strikethrough field set.
+strikethroughRun :: Int32 -> WireAttributeRun
+strikethroughRun len = (plainRun len){warStrikethrough = putField (Just 1)}
 
 
--- | Encode a Checklist sub-message (field 5) with the given done state.
-psChecklist :: Bool -> Encode.MessageBuilder
-psChecklist done =
-  Encode.embedded 5 (Encode.int32 2 (if done then 1 else 0))
+-- ParagraphStyle constructors and modifiers -----------------------------------
+
+-- | A 'WireParagraphStyle' with only the @style_type@ field set.
+psStyleType :: Int32 -> WireParagraphStyle
+psStyleType n =
+  WireParagraphStyle
+    { wpsStyleType = putField (Just n)
+    , wpsIndentAmount = putField Nothing
+    , wpsChecklist = putField Nothing
+    , wpsListStart = putField Nothing
+    , wpsBlockQuote = putField Nothing
+    }
 
 
-psListStart :: Int32 -> Encode.MessageBuilder
-psListStart = Encode.int32 7
+-- | Set the @indent_amount@ field on a 'WireParagraphStyle'.
+psIndentAmount :: Int32 -> WireParagraphStyle -> WireParagraphStyle
+psIndentAmount n ps = ps{wpsIndentAmount = putField (Just n)}
 
 
-psBlockQuote :: Encode.MessageBuilder
-psBlockQuote = Encode.int32 8 1
+-- | Set the @checklist@ sub-message on a 'WireParagraphStyle'.
+psChecklist :: Bool -> WireParagraphStyle -> WireParagraphStyle
+psChecklist done ps =
+  ps
+    { wpsChecklist =
+        putField . Just $
+          WireChecklist{wclDone = putField (Just (if done then 1 else 0))}
+    }
 
 
--- Encoder functions -------------------------------------------------------
+-- | Set the @starting_list_item_number@ field on a 'WireParagraphStyle'.
+psListStart :: Int32 -> WireParagraphStyle -> WireParagraphStyle
+psListStart n ps = ps{wpsListStart = putField (Just n)}
 
-{- | Encode a 'ProtoParagraphStyle' back to wire bytes, reusing the ps* helpers.
+
+-- | A 'WireParagraphStyle' with only the @block_quote@ field set.
+psBlockQuote :: WireParagraphStyle
+psBlockQuote =
+  WireParagraphStyle
+    { wpsStyleType = putField Nothing
+    , wpsIndentAmount = putField Nothing
+    , wpsChecklist = putField Nothing
+    , wpsListStart = putField Nothing
+    , wpsBlockQuote = putField (Just 1)
+    }
+
+
+-- Encoder functions -----------------------------------------------------------
+
+{- | Encode a 'ProtoParagraphStyle' as a 'WireParagraphStyle'.
 Proto3 default values (0 / False / Nothing) are omitted to match wire convention.
 -}
-encodeParagraphStyle :: ProtoParagraphStyle -> Encode.MessageBuilder
+encodeParagraphStyle :: ProtoParagraphStyle -> WireParagraphStyle
 encodeParagraphStyle ProtoParagraphStyle{ppsStyleType, ppsIndent, ppsChecked, ppsListStart, ppsBlockQuote} =
-  (if ppsStyleType /= 0 then psStyleType ppsStyleType else mempty)
-    <> (if ppsIndent /= 0 then psIndentAmount ppsIndent else mempty)
-    <> maybe mempty psChecklist ppsChecked
-    <> maybe mempty psListStart ppsListStart
-    <> (if ppsBlockQuote then psBlockQuote else mempty)
+  WireParagraphStyle
+    { wpsStyleType = putField (if ppsStyleType /= 0 then Just ppsStyleType else Nothing)
+    , wpsIndentAmount = putField (if ppsIndent /= 0 then Just ppsIndent else Nothing)
+    , wpsChecklist =
+        putField $
+          fmap
+            (\c -> WireChecklist{wclDone = putField (Just (if c then 1 else 0))})
+            ppsChecked
+    , wpsListStart = putField ppsListStart
+    , wpsBlockQuote = putField (if ppsBlockQuote then Just 1 else Nothing)
+    }
 
 
-{- | Encode a 'NoteStyle' as a paragraph_style sub-message.
+{- | Encode a 'NoteStyle' as a 'WireParagraphStyle'.
 Inverse of 'toNoteStyle'; 'StyleBody False' is not in the image of
 'toNoteStyle' and should not appear in generated test data.
 -}
-encodeNoteStyle :: NoteStyle -> Encode.MessageBuilder
+encodeNoteStyle :: NoteStyle -> WireParagraphStyle
 encodeNoteStyle style = encodeParagraphStyle $ case style of
   StyleTitle -> ProtoParagraphStyle 0 0 Nothing Nothing False
   StyleHeading -> ProtoParagraphStyle 1 0 Nothing Nothing False
@@ -145,18 +212,18 @@ encodeNoteStyle style = encodeParagraphStyle $ case style of
   StyleChecklist i c -> ProtoParagraphStyle 103 (fromIntegral i) (Just c) Nothing False
 
 
-{- | Encode a 'NoteRun' as an AttributeRun sub-message.
-'nrLink' is always 'Nothing' in generated runs (deferred).
--}
-encodeNoteRun :: NoteRun -> Encode.MessageBuilder
+-- | Encode a 'NoteRun' as a 'WireAttributeRun'.
+encodeNoteRun :: NoteRun -> WireAttributeRun
 encodeNoteRun NoteRun{nrLength, nrStyle, nrBold, nrItalic, nrUnderline, nrStrikethrough, nrAttachmentId, nrLink} =
-  Encode.int32 1 nrLength
-    <> maybe mempty (Encode.embedded 2 . encodeNoteStyle) nrStyle
-    <> (if fw /= 0 then Encode.int32 5 fw else mempty)
-    <> (if nrUnderline then Encode.int32 6 1 else mempty)
-    <> (if nrStrikethrough then Encode.int32 7 1 else mempty)
-    <> maybe mempty (\t -> Encode.embedded 12 (Encode.text 1 (TL.fromStrict t))) nrAttachmentId
-    <> maybe mempty (Encode.text 9 . TL.fromStrict) nrLink
+  WireAttributeRun
+    { warLength = putField (Just nrLength)
+    , warParagraphStyle = putField (fmap encodeNoteStyle nrStyle)
+    , warFontWeight = putField (if fw /= 0 then Just fw else Nothing)
+    , warUnderlined = putField (if nrUnderline then Just 1 else Nothing)
+    , warStrikethrough = putField (if nrStrikethrough then Just 1 else Nothing)
+    , warLink = putField nrLink
+    , warAttachmentInfo = putField (fmap mkAttachmentInfo nrAttachmentId)
+    }
  where
   fw :: Int32
   fw = case (nrBold, nrItalic) of
@@ -164,6 +231,7 @@ encodeNoteRun NoteRun{nrLength, nrStyle, nrBold, nrItalic, nrUnderline, nrStrike
     (True, False) -> 1
     (False, True) -> 2
     (False, False) -> 0
+  mkAttachmentInfo t = WireAttachmentInfo{waiAttachmentId = putField (Just t)}
 
 
 -- | Encode a 'NoteText' to gzip-compressed proto bytes, suitable for 'decodeNoteBody'.
