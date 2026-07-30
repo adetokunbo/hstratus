@@ -1,45 +1,185 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
+
 {- |
 Module      : Network.HStratus.Internal.Notes.Proto
 Copyright   : (c) 2026 Tim Emiola
 Maintainer  : Tim Emiola <adetokunbo@emio.la>
 SPDX-License-Identifier: BSD-3-Clause
 
-Hand-written proto3-wire decoders for the Apple Notes protobuf schema.
+Protobuf decoders for the Apple Notes wire schema.
 
-Uses proto3-wire's lower-level @Parser@ API rather than code generation
-because the schema has non-consecutive field numbers (e.g. @note_text = 2@,
-@attribute_run = 5@); explicit @\`at\` N@ bindings prevent the silent
-field-number mismatches that Generic derivation would introduce.
-Fields not listed in the decoders are silently ignored by the wire decoder.
+Uses 'Data.ProtocolBuffers' with Generic-derived 'Decode' instances for the
+wire layer ('Wire*' types), then converts to plain domain types for use in
+"Network.HStratus.Internal.Notes.Decode". Fields absent in the wire bytes
+default to zero, empty, or 'Nothing', matching proto3 semantics.
+
+The 'Wire*' types are exported so that the test-suite encoder
+('HStratus.Notes.TestHelper') can construct fixture bytes via 'Encode'
+instances without depending on @proto3-wire@.
 -}
 module Network.HStratus.Internal.Notes.Proto
-  ( ProtoNote (..)
+  ( -- * Decoded note types
+    ProtoNote (..)
   , ProtoAttributeRun (..)
   , ProtoParagraphStyle (..)
   , decodeNoteStoreProto
+
+    -- * Wire types
+  , WireNoteStoreProto (..)
+  , WireDocument (..)
+  , WireNote (..)
+  , WireAttributeRun (..)
+  , WireParagraphStyle (..)
+  , WireChecklist (..)
+  , WireAttachmentInfo (..)
   )
 where
 
 import Data.ByteString (ByteString)
 import Data.Int (Int32)
+import Data.Maybe (fromMaybe)
+import Data.ProtocolBuffers
+  ( Decode
+  , Encode
+  , Message
+  , Optional
+  , Repeated
+  , Value
+  , decodeMessage
+  , getField
+  )
+import Data.Serialize (runGet)
 import Data.Text (Text)
 import qualified Data.Text.Lazy as LT
-import Proto3.Wire.Decode
-  ( Parser
-  , RawMessage
-  , at
-  , embedded
-  , embedded'
-  , int32
-  , one
-  , parse
-  , repeated
-  , text
-  )
+import GHC.Generics (Generic)
 
 
--- Proto types mirror the schema closely; conversion to domain NoteText/NoteRun
--- types happens in Decode.hs where gzip decompression also lives.
+------------------------------------------------------------------------
+-- Wire types (Generic-derived Encode/Decode)
+------------------------------------------------------------------------
+
+-- | Outermost @NoteStoreProto@ message; field 2 holds the nested 'WireDocument'.
+data WireNoteStoreProto = WireNoteStoreProto
+  { wnspDocument :: Optional 2 (Message WireDocument)
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireNoteStoreProto
+
+
+instance Decode WireNoteStoreProto
+
+
+-- | @Document@ message nested inside 'WireNoteStoreProto'; field 3 holds the 'WireNote'.
+data WireDocument = WireDocument
+  { wdNote :: Optional 3 (Message WireNote)
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireDocument
+
+
+instance Decode WireDocument
+
+
+-- | @Note@ message; field 2 is the note text, field 5 is the attribute runs.
+data WireNote = WireNote
+  { wnNoteText :: Optional 2 (Value Text)
+  -- ^ full plain-text content (proto field 2)
+  , wnAttributeRuns :: Repeated 5 (Message WireAttributeRun)
+  -- ^ attribute runs describing formatting (proto field 5)
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireNote
+
+
+instance Decode WireNote
+
+
+-- | @AttributeRun@ message describing a span of formatted text.
+data WireAttributeRun = WireAttributeRun
+  { warLength :: Optional 1 (Value Int32)
+  -- ^ number of UTF-16 code units this run covers
+  , warParagraphStyle :: Optional 2 (Message WireParagraphStyle)
+  -- ^ paragraph-level formatting; absent when the run carries none
+  , warFontWeight :: Optional 5 (Value Int32)
+  -- ^ font weight: 1=bold, 2=italic, 3=bold+italic; absent means no weight
+  , warUnderlined :: Optional 6 (Value Int32)
+  -- ^ non-zero when underlined
+  , warStrikethrough :: Optional 7 (Value Int32)
+  -- ^ non-zero when strikethrough
+  , warLink :: Optional 9 (Value Text)
+  -- ^ hyperlink URL; absent means no link
+  , warAttachmentInfo :: Optional 12 (Message WireAttachmentInfo)
+  -- ^ attachment sub-message; absent when no attachment
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireAttributeRun
+
+
+instance Decode WireAttributeRun
+
+
+-- | @ParagraphStyle@ message describing paragraph-level formatting.
+data WireParagraphStyle = WireParagraphStyle
+  { wpsStyleType :: Optional 1 (Value Int32)
+  -- ^ 0=title, 1=heading, 2=subheading, 4=monospaced, 100=bullet, 101=dash, 102=numbered, 103=checklist
+  , wpsIndentAmount :: Optional 4 (Value Int32)
+  -- ^ indent level; absent means zero
+  , wpsChecklist :: Optional 5 (Message WireChecklist)
+  -- ^ checklist sub-message; absent when not a checklist paragraph
+  , wpsListStart :: Optional 7 (Value Int32)
+  -- ^ starting list item number; absent or zero means no explicit start
+  , wpsBlockQuote :: Optional 8 (Value Int32)
+  -- ^ non-zero when this paragraph is a block quote
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireParagraphStyle
+
+
+instance Decode WireParagraphStyle
+
+
+-- | @Checklist@ sub-message (field 5 of 'WireParagraphStyle').
+data WireChecklist = WireChecklist
+  { wclDone :: Optional 2 (Value Int32)
+  -- ^ non-zero when the checklist item is checked
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireChecklist
+
+
+instance Decode WireChecklist
+
+
+-- | @AttachmentInfo@ sub-message (field 12 of 'WireAttributeRun').
+data WireAttachmentInfo = WireAttachmentInfo
+  { waiAttachmentId :: Optional 1 (Value Text)
+  -- ^ attachment identifier string
+  }
+  deriving (Generic, Show)
+
+
+instance Encode WireAttachmentInfo
+
+
+instance Decode WireAttachmentInfo
+
+
+------------------------------------------------------------------------
+-- Plain domain types (unchanged; consumed by Decode.hs)
+------------------------------------------------------------------------
 
 -- | Top-level note content decoded from the protobuf payload.
 data ProtoNote = ProtoNote
@@ -76,80 +216,76 @@ data ProtoParagraphStyle = ProtoParagraphStyle
   { ppsStyleType :: Int32
   -- ^ style_type field 1: 0=title, 1=heading, 2=subheading, 4=monospaced, 100=bullet, 101=dash, 102=numbered, 103=checklist
   , ppsIndent :: Int32
-  -- ^ indent_amount field 4; 0 when absent.
+  -- ^ indent_amount field 4; 0 when absent
   , ppsChecked :: Maybe Bool
-  -- ^ checklist.done field 5 sub-field 2; 'Nothing' when checklist sub-message absent.
+  -- ^ checklist.done field 5 sub-field 2; 'Nothing' when checklist sub-message absent
   , ppsListStart :: Maybe Int32
-  -- ^ starting_list_item_number field 7; 'Nothing' when absent or zero.
+  -- ^ starting_list_item_number field 7; 'Nothing' when absent or zero
   , ppsBlockQuote :: Bool
-  -- ^ block_quote field 8 non-zero.
+  -- ^ block_quote field 8 non-zero
   }
   deriving (Eq, Show)
 
 
-{- | Decode a gzip-decompressed protobuf ByteString into a 'ProtoNote'.
+------------------------------------------------------------------------
+-- Decoding
+------------------------------------------------------------------------
+
+{- | Decode a decompressed protobuf 'ByteString' into a 'ProtoNote'.
 Returns 'Left' with a message if the outer document or note field is absent,
-which would indicate a malformed or empty payload rather than a real note.
+indicating a malformed or empty payload.
 -}
 decodeNoteStoreProto :: ByteString -> Either String ProtoNote
-decodeNoteStoreProto bs =
-  case parse parseNoteStoreProto bs of
-    Left err -> Left (show err)
-    Right Nothing -> Left "NoteStoreProto: document field absent"
-    Right (Just Nothing) -> Left "Document: note field absent"
-    Right (Just (Just note)) -> Right note
+decodeNoteStoreProto bs = do
+  outer <- runGet decodeMessage bs
+  doc <-
+    maybe
+      (Left "NoteStoreProto: document field absent")
+      Right
+      (getField (wnspDocument outer))
+  wNote <-
+    maybe
+      (Left "Document: note field absent")
+      Right
+      (getField (wdNote doc))
+  pure (toProtoNote wNote)
 
 
--- Drill straight through NoteStoreProto (field 2) → Document (field 3) → Note
--- without defining a separate Document record type.  Each `embedded` call wraps
--- the result in Maybe: Nothing means the field was absent in the wire bytes.
-parseNoteStoreProto :: Parser RawMessage (Maybe (Maybe ProtoNote))
-parseNoteStoreProto = embedded (embedded parseProtoNote `at` 3) `at` 2
-
-
--- `one text LT.empty` reads a singular string field, returning the default
--- (empty) when the field is absent.  `fmap LT.toStrict` converts the lazy
--- Text that proto3-wire produces to the strict Text used in ProtoNote.
--- `repeated (embedded' ...)` collects all occurrences of a length-delimited
--- field into a list; embedded' (vs embedded) is used inside repeated because
--- the field is known to be present (not optional) at each occurrence.
-parseProtoNote :: Parser RawMessage ProtoNote
-parseProtoNote =
+toProtoNote :: WireNote -> ProtoNote
+toProtoNote wn =
   ProtoNote
-    <$> (fmap LT.toStrict (one text LT.empty) `at` 2)
-    <*> (repeated (embedded' parseProtoAttributeRun) `at` 5)
+    { pnNoteText = fromMaybe mempty (getField (wnNoteText wn))
+    , pnAttributeRuns = map toProtoAttributeRun (getField (wnAttributeRuns wn))
+    }
 
 
--- Scalar optional fields (font_weight, underlined, strikethrough) use
--- `one int32 0` — the proto3 default of 0 means "absent / no effect" for
--- all of them (0 = FONT_WEIGHT_UNKNOWN, 0 = not underlined, etc.).
--- `embedded` for paragraph_style returns Maybe: Nothing when the run carries
--- no paragraph-level formatting.
-parseProtoAttributeRun :: Parser RawMessage ProtoAttributeRun
-parseProtoAttributeRun =
+toProtoAttributeRun :: WireAttributeRun -> ProtoAttributeRun
+toProtoAttributeRun war =
   ProtoAttributeRun
-    <$> (one int32 0 `at` 1)
-    <*> (embedded parseParagraphStyle `at` 2)
-    <*> (one int32 0 `at` 5) -- font_weight (fields 3 and 4 are absent in schema)
-    <*> (one int32 0 `at` 6) -- underlined
-    <*> (one int32 0 `at` 7) -- strikethrough
-    <*> fmap (>>= \t -> if LT.null t then Nothing else Just t) (embedded parseAttachmentInfo `at` 12)
-    <*> (one text LT.empty `at` 9) -- link (field 8 skipped: superscript)
+    { parLength = fromMaybe 0 (getField (warLength war))
+    , parParagraphStyle = fmap toParagraphStyle (getField (warParagraphStyle war))
+    , parFontWeight = fromMaybe 0 (getField (warFontWeight war))
+    , parUnderlined = fromMaybe 0 (getField (warUnderlined war))
+    , parStrikethrough = fromMaybe 0 (getField (warStrikethrough war))
+    , parAttachmentId =
+        getField (warAttachmentInfo war) >>= \ai ->
+          let t = maybe LT.empty LT.fromStrict (getField (waiAttachmentId ai))
+           in if LT.null t then Nothing else Just t
+    , parLink = maybe LT.empty LT.fromStrict (getField (warLink war))
+    }
 
 
-parseAttachmentInfo :: Parser RawMessage LT.Text
-parseAttachmentInfo = one text LT.empty `at` 1
-
-
-parseParagraphStyle :: Parser RawMessage ProtoParagraphStyle
-parseParagraphStyle =
+toParagraphStyle :: WireParagraphStyle -> ProtoParagraphStyle
+toParagraphStyle wps =
   ProtoParagraphStyle
-    <$> (one int32 0 `at` 1)
-    <*> (one int32 0 `at` 4)
-    <*> (embedded parseChecklist `at` 5)
-    <*> (fmap (\n -> if n == 0 then Nothing else Just n) (one int32 0) `at` 7)
-    <*> (fmap (/= 0) (one int32 0) `at` 8)
-
-
-parseChecklist :: Parser RawMessage Bool
-parseChecklist = fmap (/= 0) (one int32 0 `at` 2)
+    { ppsStyleType = fromMaybe 0 (getField (wpsStyleType wps))
+    , ppsIndent = fromMaybe 0 (getField (wpsIndentAmount wps))
+    , ppsChecked =
+        fmap
+          (\cl -> fromMaybe 0 (getField (wclDone cl)) /= 0)
+          (getField (wpsChecklist wps))
+    , ppsListStart =
+        getField (wpsListStart wps) >>= \n ->
+          if n == 0 then Nothing else Just n
+    , ppsBlockQuote = fromMaybe 0 (getField (wpsBlockQuote wps)) /= 0
+    }
