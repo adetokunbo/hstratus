@@ -43,6 +43,7 @@ import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time (UTCTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
+import Hstratus.Cli.Common (commonOptsParser)
 import Network.HStratus.Drive
   ( DriveApi
   , DriveError
@@ -57,7 +58,7 @@ import Network.HStratus.Drive
   , mkDriveApi
   , selectFileNode
   )
-import Network.HStratus.Http.Cli (CommonOpts (..), commonOptsParser, onServiceError, runWithApi)
+import Network.HStratus.Http.Cli (CommonOpts (..), onServiceError, runWithApi)
 import Options.Applicative
 import System.Directory (createDirectoryIfMissing, getHomeDirectory)
 import System.Exit (die)

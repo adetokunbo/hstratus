@@ -17,6 +17,7 @@ where
 
 import Control.Exception (bracket_, catch, displayException)
 import Data.String (fromString)
+import Hstratus.Cli.Common (commonOptsParser)
 import Network.HStratus.Http
   ( AuthError
   , login
@@ -25,7 +26,6 @@ import Network.HStratus.Http
   )
 import Network.HStratus.Http.Cli
   ( CommonOpts (..)
-  , commonOptsParser
   , mkLoggerFor
   , resolveLogTarget
   )
