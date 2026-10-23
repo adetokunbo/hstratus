@@ -85,4 +85,4 @@ test-suite test
     , hstratus-notes
     , optparse-applicative >=0.18 && <0.20
     , text                 >=1.2.3 && <2.2
-    , time                 >=1.8 && <1.15
+    , time                 >=1.8 && <1.17

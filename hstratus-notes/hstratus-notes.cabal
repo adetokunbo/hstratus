@@ -112,7 +112,7 @@ test-suite test
     , QuickCheck                   >=2.14 && <3
     , temporary                    >=1.2 && <1.4
     , text                         >=1.2.3 && <2.2
-    , time                         >=1.9 && <1.15
+    , time                         >=1.9 && <1.17
     , wai                          >=3.2 && <3.3
     , warp                         >=3.2 && <3.5
     , zlib                         >=0.6 && <0.8
