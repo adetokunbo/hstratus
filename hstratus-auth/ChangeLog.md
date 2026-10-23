@@ -2,6 +2,10 @@
 
 `icloud-auth` uses [PVP Versioning][1].
 
+## 0.2.0.3 -- 2026-10-23
+
+* Relex upper bound on the time dependency
+
 ## 0.2.0.2 -- 2026-07-30
 
 * Remove unused dependencies from main library

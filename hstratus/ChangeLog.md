@@ -2,6 +2,10 @@
 
 `hstratus` uses [PVP Versioning][1].
 
+## 0.1.1.3 -- 2026-10-23
+
+* Relax the upper bound on the `time` dependency
+
 ## 0.1.1.2 -- 2026-07-30
 
 * Remove unused `xdg-basedir` dependency.
